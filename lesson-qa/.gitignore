@@ -1,0 +1,9 @@
+*.mp4
+*.webm
+*.mov
+*.json
+!package.json
+qa_history.db
+reports/
+__pycache__/
+.env
