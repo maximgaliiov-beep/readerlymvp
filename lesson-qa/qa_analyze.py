@@ -291,16 +291,34 @@ IMPORTANT RULES:
 
 
 def get_video_duration_minutes(video_path: str) -> int:
-    """Get video duration in minutes using macOS mdls."""
-    result = subprocess.run(
-        ["mdls", "-name", "kMDItemDurationSeconds", video_path],
-        capture_output=True, text=True
-    )
-    for line in result.stdout.strip().split("\n"):
-        if "kMDItemDurationSeconds" in line and "(null)" not in line:
-            seconds = float(line.split("=")[1].strip())
+    """Get video duration in minutes. Tries ffprobe, then macOS mdls, then defaults to 45."""
+    # Try ffprobe first (works on Linux / Streamlit Cloud)
+    try:
+        result = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", video_path],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            seconds = float(result.stdout.strip())
             return round(seconds / 60)
-    return 45
+    except FileNotFoundError:
+        pass
+
+    # Try macOS mdls
+    try:
+        result = subprocess.run(
+            ["mdls", "-name", "kMDItemDurationSeconds", video_path],
+            capture_output=True, text=True
+        )
+        for line in result.stdout.strip().split("\n"):
+            if "kMDItemDurationSeconds" in line and "(null)" not in line:
+                seconds = float(line.split("=")[1].strip())
+                return round(seconds / 60)
+    except FileNotFoundError:
+        pass
+
+    return 45  # default assumption
 
 
 def analyze_lesson(video_path: str, model: str = "gemini-2.5-pro") -> dict:
