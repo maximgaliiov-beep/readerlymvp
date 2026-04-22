@@ -321,7 +321,7 @@ def get_video_duration_minutes(video_path: str) -> int:
     return 45  # default assumption
 
 
-def analyze_lesson(video_path: str, model: str = "gemini-2.5-pro") -> dict:
+def analyze_lesson(video_path: str, model: str = "gemini-2.5-pro", extra_rules: str = "") -> dict:
     """Upload video to Gemini and get QA analysis."""
     client = genai.Client(api_key=GEMINI_API_KEY)
     duration_minutes = get_video_duration_minutes(video_path)
@@ -340,8 +340,12 @@ def analyze_lesson(video_path: str, model: str = "gemini-2.5-pro") -> dict:
 
     print(f"  Video ready ({video_file.state.name})")
     print(f"Analyzing lesson with {model}...")
+    if extra_rules:
+        print(f"  Applying {extra_rules.count(chr(10))} scoring rules")
 
     rubric = QA_RUBRIC.replace("{duration_minutes}", str(duration_minutes))
+    if extra_rules:
+        rubric = rubric + "\n\n" + extra_rules
 
     response = client.models.generate_content(
         model=model,

@@ -41,6 +41,28 @@ def init_db():
             analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS scoring_rules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            rule_text TEXT NOT NULL,
+            category TEXT,
+            status TEXT DEFAULT 'active',
+            source TEXT DEFAULT 'manual',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS criterion_feedback (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lesson_id INTEGER,
+            criterion_key TEXT,
+            ai_score INTEGER,
+            human_score INTEGER,
+            feedback TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (lesson_id) REFERENCES lessons(id)
+        )
+    """)
     conn.commit()
     return conn
 
@@ -83,6 +105,47 @@ def get_lesson_report(conn, lesson_id: int):
     return cursor.fetchone()
 
 
+# --- Rules ---
+def get_active_rules(conn):
+    cursor = conn.execute("""
+        SELECT id, rule_text, category, source, created_at
+        FROM scoring_rules WHERE status = 'active' ORDER BY created_at DESC
+    """)
+    return cursor.fetchall()
+
+
+def add_rule(conn, rule_text: str, category: str = "general", source: str = "manual"):
+    conn.execute("""
+        INSERT INTO scoring_rules (rule_text, category, source) VALUES (?, ?, ?)
+    """, (rule_text, category, source))
+    conn.commit()
+
+
+def delete_rule(conn, rule_id: int):
+    conn.execute("UPDATE scoring_rules SET status = 'disabled' WHERE id = ?", (rule_id,))
+    conn.commit()
+
+
+def save_criterion_feedback(conn, lesson_id: int, criterion_key: str,
+                            ai_score: int, human_score: int, feedback: str):
+    conn.execute("""
+        INSERT INTO criterion_feedback (lesson_id, criterion_key, ai_score, human_score, feedback)
+        VALUES (?, ?, ?, ?, ?)
+    """, (lesson_id, criterion_key, ai_score, human_score, feedback))
+    conn.commit()
+
+
+def get_rules_for_prompt(conn) -> str:
+    """Build a rules string to inject into the QA rubric prompt."""
+    rules = get_active_rules(conn)
+    if not rules:
+        return ""
+    lines = ["## MANDATORY SCORING RULES", "Apply these rules strictly when scoring. They override general guidelines.", ""]
+    for _, text, category, _, _ in rules:
+        lines.append(f"- [{category.upper()}] {text}")
+    return "\n".join(lines)
+
+
 # --- Helpers ---
 def collect_scores(obj):
     scores = []
@@ -103,25 +166,29 @@ def render_criterion(data, key=""):
     comment = data.get("comment", "")
 
     if score is None:
-        color = "#f0f0f0"
-        label = "N/A"
+        bg_color = "#e0e0e0"
+        text_color = "#666"
+        score_bg = "#ccc"
     elif score >= 5:
-        color = "#c6efce"
-        label = f"**{score}**/5"
+        bg_color = "#d4edda"
+        text_color = "#1a1a1a"
+        score_bg = "#28a745"
     elif score >= 3:
-        color = "#ffffcc"
-        label = f"**{score}**/5"
+        bg_color = "#fff3e0"
+        text_color = "#1a1a1a"
+        score_bg = "#f57c00"
     else:
-        color = "#fce4d6"
-        label = f"**{score}**/5"
+        bg_color = "#fde0dc"
+        text_color = "#1a1a1a"
+        score_bg = "#d32f2f"
 
     st.markdown(f"""
-    <div style="background-color: {color}; padding: 8px 12px; border-radius: 4px; margin-bottom: 4px; border: 1px solid #ddd;">
+    <div style="background-color: {bg_color}; padding: 10px 14px; border-radius: 6px; margin-bottom: 6px; border: 1px solid #ccc;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <div style="flex: 3; font-size: 0.85em;">{data['criterion']}</div>
-            <div style="flex: 0.3; text-align: center; font-weight: bold; font-size: 1.1em;">{score if score else 'N/A'}</div>
+            <div style="flex: 3; font-size: 0.85em; color: {text_color};">{data['criterion']}</div>
+            <div style="flex: 0; min-width: 36px; text-align: center; font-weight: bold; font-size: 1.0em; color: #fff; background-color: {score_bg}; border-radius: 4px; padding: 2px 8px;">{score if score else 'N/A'}</div>
         </div>
-        <div style="font-size: 0.8em; color: #555; margin-top: 4px;">{comment}</div>
+        <div style="font-size: 0.8em; color: #333; margin-top: 6px;">{comment}</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -198,7 +265,10 @@ def page_analyze():
 
             try:
                 os.environ["GEMINI_API_KEY"] = api_key
-                report = analyze_lesson(tmp_path, model)
+                conn = init_db()
+                rules_text = get_rules_for_prompt(conn)
+                conn.close()
+                report = analyze_lesson(tmp_path, model, extra_rules=rules_text)
 
                 # Save JSON report
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -295,58 +365,219 @@ def page_history():
     conn.close()
 
 
+def extract_criteria_flat(report, prefix=""):
+    """Extract all criteria as flat list with keys for per-criterion feedback."""
+    items = []
+    if isinstance(report, dict):
+        if "criterion" in report and "score" in report:
+            items.append((prefix, report))
+        else:
+            for k, v in report.items():
+                if k in ("lesson_subject", "lesson_duration_observed_minutes", "final_score"):
+                    continue
+                items.extend(extract_criteria_flat(v, f"{prefix}.{k}" if prefix else k))
+    return items
+
+
 def page_feedback():
     st.header("Review & Calibrate")
-    st.write("Adjust AI scores to help calibrate the model. Your feedback is saved for future prompt improvements.")
 
     conn = init_db()
-    lessons = get_all_lessons(conn)
 
-    if not lessons:
-        st.info("No lessons to review yet.")
-        return
+    tab_review, tab_rules, tab_history = st.tabs(["Review Lessons", "Scoring Rules", "Review History"])
 
-    # Filter to unreviewed
-    unreviewed = [l for l in lessons if l[7] is None]
-    reviewed = [l for l in lessons if l[7] is not None]
+    # --- TAB 1: Review lessons with per-criterion feedback ---
+    with tab_review:
+        lessons = get_all_lessons(conn)
+        unreviewed = [l for l in lessons if l[7] is None]
 
-    tab1, tab2 = st.tabs([f"Needs Review ({len(unreviewed)})", f"Reviewed ({len(reviewed)})"])
+        if not unreviewed:
+            st.info("No lessons to review. Analyze some lessons first!")
+        else:
+            st.write(f"**{len(unreviewed)} lessons** waiting for review")
 
-    with tab1:
-        for lesson in unreviewed:
-            lid, name, bid, tutor, subject, dur, ai_score, _, model, analyzed = lesson
-            with st.expander(f"**{name}** — AI Score: {ai_score}/5"):
-                result = get_lesson_report(conn, lid)
-                if result:
+            for lesson in unreviewed:
+                lid, name, bid, tutor, subject, dur, ai_score, _, model, analyzed = lesson
+                with st.expander(f"**{name}** — AI: {ai_score}/5 — {subject or 'N/A'} — {analyzed[:16]}"):
+                    result = get_lesson_report(conn, lid)
+                    if not result:
+                        continue
+
                     report = json.loads(result[0])
-                    render_report(report)
+
+                    # Overall score adjustment
+                    col1, col2 = st.columns([1, 2])
+                    with col1:
+                        human_score = st.slider(
+                            "Your overall score",
+                            1.0, 5.0, float(ai_score or 3.0), 0.1,
+                            key=f"score_{lid}"
+                        )
+                    with col2:
+                        overall_feedback = st.text_area(
+                            "Overall feedback",
+                            placeholder="General notes about AI accuracy...",
+                            key=f"overall_{lid}"
+                        )
+
+                    # Per-criterion review
+                    st.markdown("---")
+                    st.markdown("**Per-criterion adjustments** (only fill in where AI was wrong)")
+
+                    criteria = extract_criteria_flat(report)
+                    corrections = []
+
+                    for crit_key, crit_data in criteria:
+                        ai_s = crit_data.get("score")
+                        if ai_s is None:
+                            continue
+
+                        short_name = crit_key.split(".")[-1].replace("_", " ").title()
+                        with st.container():
+                            cols = st.columns([3, 1, 1, 3])
+                            cols[0].markdown(f"<small>{crit_data['criterion'][:80]}...</small>" if len(crit_data['criterion']) > 80 else f"<small>{crit_data['criterion']}</small>", unsafe_allow_html=True)
+                            cols[1].markdown(f"AI: **{ai_s}**")
+                            new_score = cols[2].selectbox(
+                                "Your score",
+                                [None, 1, 2, 3, 4, 5],
+                                index=0,
+                                key=f"crit_{lid}_{crit_key}",
+                                format_func=lambda x: "-" if x is None else str(x)
+                            )
+                            crit_note = cols[3].text_input(
+                                "Note",
+                                placeholder="Why is AI wrong here?",
+                                key=f"note_{lid}_{crit_key}",
+                                label_visibility="collapsed"
+                            )
+                            if new_score is not None:
+                                corrections.append((crit_key, ai_s, new_score, crit_note))
+
+                    # Suggest rule from corrections
+                    if corrections:
+                        st.markdown("---")
+                        st.markdown("**Suggested rules from your corrections:**")
+                        for crit_key, ai_s, human_s, note in corrections:
+                            short = crit_key.split(".")[-1].replace("_", " ")
+                            direction = "too high" if ai_s > human_s else "too low"
+                            suggestion = f"For '{short}': AI scored {ai_s}, should be {human_s}."
+                            if note:
+                                suggestion += f" Reason: {note}"
+                            st.info(f"Rule suggestion: {suggestion}")
 
                     st.markdown("---")
-                    st.subheader("Your Review")
-                    human_score = st.slider(
-                        "Your overall score",
-                        1.0, 5.0, float(ai_score or 3.0), 0.1,
-                        key=f"score_{lid}"
-                    )
-                    feedback = st.text_area(
-                        "What did the AI get wrong?",
-                        placeholder="e.g. 'AI scored engagement too high — student was clearly distracted at 15:00'",
-                        key=f"feedback_{lid}"
-                    )
-                    if st.button("Save Review", key=f"save_{lid}"):
-                        update_human_feedback(conn, lid, human_score, feedback)
-                        st.success("Review saved!")
+                    if st.button("Save Review", key=f"save_{lid}", type="primary"):
+                        # Save overall
+                        update_human_feedback(conn, lid, human_score, overall_feedback)
+                        # Save per-criterion
+                        for crit_key, ai_s, human_s, note in corrections:
+                            save_criterion_feedback(conn, lid, crit_key, ai_s, human_s, note)
+                        st.success("Review saved! Check 'Scoring Rules' tab to create rules from your feedback.")
                         st.rerun()
 
-    with tab2:
-        if reviewed:
+    # --- TAB 2: Scoring rules management ---
+    with tab_rules:
+        st.subheader("Active Scoring Rules")
+        st.write("These rules are injected into every analysis prompt. They override the AI's default scoring behavior.")
+
+        rules = get_active_rules(conn)
+
+        if rules:
+            for rid, text, category, source, created in rules:
+                cols = st.columns([1, 5, 1])
+                cols[0].markdown(f"`{category}`")
+                cols[1].write(text)
+                if cols[2].button("Remove", key=f"del_rule_{rid}"):
+                    delete_rule(conn, rid)
+                    st.rerun()
+        else:
+            st.info("No active rules yet. Add rules below or they'll be suggested from reviews.")
+
+        # Add new rule manually
+        st.markdown("---")
+        st.subheader("Add New Rule")
+
+        CATEGORIES = [
+            "engagement", "communication", "time_management", "workplace",
+            "teaching_materials", "pedagogical", "soft_skills", "tech_issues", "general"
+        ]
+
+        col1, col2 = st.columns([3, 1])
+        new_rule = col1.text_area(
+            "Rule",
+            placeholder="e.g. 'If silence pauses >20 seconds occur more than 3 times, communication score must be 1 or 2'",
+            key="new_rule_text"
+        )
+        new_category = col2.selectbox("Category", CATEGORIES, key="new_rule_cat")
+
+        if st.button("Add Rule", type="primary") and new_rule.strip():
+            add_rule(conn, new_rule.strip(), new_category)
+            st.success("Rule added! It will be applied to all future analyses.")
+            st.rerun()
+
+        # Show suggestions from past criterion feedback
+        st.markdown("---")
+        st.subheader("Suggested Rules from Reviews")
+
+        cursor = conn.execute("""
+            SELECT criterion_key, ai_score, human_score, feedback,
+                   COUNT(*) as occurrences
+            FROM criterion_feedback
+            WHERE ai_score != human_score
+            GROUP BY criterion_key,
+                     CASE WHEN ai_score > human_score THEN 'over' ELSE 'under' END
+            HAVING occurrences >= 1
+            ORDER BY occurrences DESC
+            LIMIT 10
+        """)
+        suggestions = cursor.fetchall()
+
+        if suggestions:
+            for crit_key, ai_s, human_s, feedback, count in suggestions:
+                short = crit_key.split(".")[-1].replace("_", " ")
+                direction = "overscores" if ai_s > human_s else "underscores"
+                suggestion = f"AI {direction} '{short}' (AI gave {ai_s}, human gave {human_s})"
+                if feedback:
+                    suggestion += f" — {feedback}"
+
+                cols = st.columns([5, 1])
+                cols[0].write(f"({count}x) {suggestion}")
+                if cols[1].button("Add as Rule", key=f"suggest_{crit_key}_{ai_s}_{human_s}"):
+                    rule_text = f"For '{short}': {feedback}" if feedback else suggestion
+                    add_rule(conn, rule_text, crit_key.split(".")[0] if "." in crit_key else "general", "auto")
+                    st.success("Rule created from suggestion!")
+                    st.rerun()
+        else:
+            st.info("No suggestions yet. Review some lessons first — patterns will appear here.")
+
+    # --- TAB 3: Review history ---
+    with tab_history:
+        lessons = get_all_lessons(conn)
+        reviewed = [l for l in lessons if l[7] is not None]
+
+        if not reviewed:
+            st.info("No reviewed lessons yet.")
+        else:
+            st.subheader("Accuracy Overview")
+            diffs = []
+            for l in reviewed:
+                ai_s, human_s = l[6], l[7]
+                if ai_s and human_s:
+                    diffs.append(ai_s - human_s)
+
+            if diffs:
+                avg_diff = sum(diffs) / len(diffs)
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Reviewed Lessons", len(reviewed))
+                col2.metric("Avg AI-Human Diff", f"{avg_diff:+.2f}")
+                col3.metric("Accuracy", f"{100 - abs(avg_diff) / 5 * 100:.0f}%")
+
+            st.markdown("---")
             for lesson in reviewed:
                 lid, name, bid, tutor, subject, dur, ai_score, human_score, model, analyzed = lesson
                 diff = round(ai_score - human_score, 2) if ai_score and human_score else 0
-                direction = "↑" if diff > 0 else ("↓" if diff < 0 else "=")
-                st.write(f"**{name}** — AI: {ai_score} | Human: {human_score} | Diff: {direction} {abs(diff)}")
-        else:
-            st.info("No reviewed lessons yet.")
+                icon = "🔴" if abs(diff) > 1 else ("🟡" if abs(diff) > 0.5 else "🟢")
+                st.write(f"{icon} **{name}** — AI: {ai_score} | Human: {human_score} | Diff: {diff:+.2f}")
 
     conn.close()
 
