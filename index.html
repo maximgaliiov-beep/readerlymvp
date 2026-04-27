@@ -313,7 +313,7 @@ let sessionHistory = JSON.parse(localStorage.getItem('writerly_history') || '[]'
 let allRecognizedWords = [];
 let allRecognizedText = '';
 let finalPronScores = { accuracy: 0, fluency: 0, completeness: 0, prosody: 0, overall: 0 };
-let pronScoreCount = 0;
+let pronScoreWeights = 0;
 
 function init() {
   document.querySelectorAll('.level-btn').forEach(btn => {
@@ -343,11 +343,23 @@ function hideResults() {
   document.getElementById('status').className = 'status';
 }
 
-function startReading() {
+async function startReading() {
   const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
   speechConfig.speechRecognitionLanguage = 'en-US';
 
-  const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+  // Give kids more time to pause between words/sentences
+  speechConfig.setProperty(SpeechSDK.PropertyId.Speech_SegmentationSilenceTimeoutMs, "3000");
+  speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "5000");
+
+  // Optimize for children's voices
+  speechConfig.setProperty("SpeechServiceConnection_ChildSpeech", "true");
+
+  // Use microphone with noise suppression and auto gain
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
+  });
+  window._writerlyStream = stream;
+  const audioConfig = SpeechSDK.AudioConfig.fromStreamInput(stream);
 
   const pronConfig = new SpeechSDK.PronunciationAssessmentConfig(
     currentText,
@@ -364,7 +376,7 @@ function startReading() {
   allRecognizedWords = [];
   allRecognizedText = '';
   finalPronScores = { accuracy: 0, fluency: 0, completeness: 0, prosody: 0, overall: 0 };
-  pronScoreCount = 0;
+  pronScoreWeights = 0;
 
   document.getElementById('btnStart').disabled = true;
   document.getElementById('btnFinish').disabled = false;
@@ -388,12 +400,14 @@ function startReading() {
         }
         if (nBest && nBest.PronunciationAssessment) {
           const pa = nBest.PronunciationAssessment;
-          finalPronScores.accuracy += pa.AccuracyScore || 0;
-          finalPronScores.fluency += pa.FluencyScore || 0;
-          finalPronScores.completeness += pa.CompletenessScore || 0;
-          finalPronScores.prosody += pa.ProsodyScore || 0;
-          finalPronScores.overall += pa.PronScore || 0;
-          pronScoreCount++;
+          // Weight scores by word count so longer segments count more
+          const segmentWords = nBest.Words ? nBest.Words.length : 1;
+          finalPronScores.accuracy += (pa.AccuracyScore || 0) * segmentWords;
+          finalPronScores.fluency += (pa.FluencyScore || 0) * segmentWords;
+          finalPronScores.completeness += (pa.CompletenessScore || 0) * segmentWords;
+          finalPronScores.prosody += (pa.ProsodyScore || 0) * segmentWords;
+          finalPronScores.overall += (pa.PronScore || 0) * segmentWords;
+          pronScoreWeights += segmentWords;
         }
       } catch (err) { /* ignore parse errors */ }
 
@@ -431,13 +445,13 @@ function finishReading() {
   recognizer.stopContinuousRecognitionAsync(
     function () {
       // Build final results
-      if (allRecognizedWords.length > 0 && pronScoreCount > 0) {
+      if (allRecognizedWords.length > 0 && pronScoreWeights > 0) {
         const avgScores = {
-          accuracyScore: finalPronScores.accuracy / pronScoreCount,
-          fluencyScore: finalPronScores.fluency / pronScoreCount,
-          completenessScore: finalPronScores.completeness / pronScoreCount,
-          prosodyScore: finalPronScores.prosody / pronScoreCount,
-          pronunciationScore: finalPronScores.overall / pronScoreCount,
+          accuracyScore: finalPronScores.accuracy / pronScoreWeights,
+          fluencyScore: finalPronScores.fluency / pronScoreWeights,
+          completenessScore: finalPronScores.completeness / pronScoreWeights,
+          prosodyScore: finalPronScores.prosody / pronScoreWeights,
+          pronunciationScore: finalPronScores.overall / pronScoreWeights,
         };
         displayResultsFromContinuous(avgScores, allRecognizedWords, allRecognizedText);
       } else {
@@ -445,12 +459,20 @@ function finishReading() {
       }
       recognizer.close();
       recognizer = null;
+      if (window._writerlyStream) {
+        window._writerlyStream.getTracks().forEach(t => t.stop());
+        window._writerlyStream = null;
+      }
       resetControls();
     },
     function (err) {
       setStatus('Error stopping: ' + err);
       recognizer.close();
       recognizer = null;
+      if (window._writerlyStream) {
+        window._writerlyStream.getTracks().forEach(t => t.stop());
+        window._writerlyStream = null;
+      }
       resetControls();
     }
   );
@@ -462,6 +484,11 @@ function stopReading() {
       function () { recognizer.close(); recognizer = null; },
       function () { recognizer.close(); recognizer = null; }
     );
+  }
+  // Release microphone
+  if (window._writerlyStream) {
+    window._writerlyStream.getTracks().forEach(t => t.stop());
+    window._writerlyStream = null;
   }
   resetControls();
   setStatus('Stopped.');
