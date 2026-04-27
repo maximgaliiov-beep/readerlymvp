@@ -1,5 +1,7 @@
 # Brighterly Lesson QA — AI-Powered Tutor Quality Analysis
 
+> Part of the [Writerly MVP](../README.md) repository. See also: [Writerly AI Reading Tutor](../README.md#1-writerly--ai-reading-tutor).
+
 ## Overview
 
 This tool automates quality assurance for Brighterly's online tutoring lessons. It uses Google's Gemini 2.5 Pro model to watch full lesson recordings (video + audio) and generate detailed QA scorecards that match the format used by the human QA team.
