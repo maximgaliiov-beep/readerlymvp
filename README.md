@@ -65,7 +65,18 @@ Results displayed:
 | Prosody | Expression, intonation, stress patterns |
 | WER | Word Error Rate — substitutions, deletions, insertions |
 
-### Setup
+### Live URL
+
+**https://writerly-729002273999.us-central1.run.app**
+
+Deployed on Google Cloud Run (`brighterly-rnd` project, `us-central1`). Scales to zero when idle.
+
+To redeploy after changes:
+```bash
+gcloud run deploy writerly --project=brighterly-rnd --region=us-central1 --source=.
+```
+
+### Setup (local)
 
 1. Get an Azure Speech Services key from the Azure Portal
 2. Replace `YOUR_AZURE_SPEECH_KEY_HERE` in `index.html` with your key
