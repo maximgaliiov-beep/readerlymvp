@@ -194,6 +194,14 @@
     .scores { grid-template-columns: repeat(3, 1fr); }
   }
 
+  .sentence-done { color: var(--green); }
+  .sentence-active {
+    background: rgba(108,92,231,0.12);
+    padding: 2px 4px;
+    border-radius: 4px;
+    border-bottom: 2px solid var(--primary);
+  }
+  .sentence-upcoming { color: var(--muted); }
   .hidden { display: none; }
 </style>
 </head>
@@ -314,6 +322,9 @@ let allRecognizedWords = [];
 let allRecognizedText = '';
 let finalPronScores = { accuracy: 0, fluency: 0, completeness: 0, prosody: 0, overall: 0 };
 let pronScoreWeights = 0;
+let sentences = [];
+let currentSentenceIdx = 0;
+let isReading = false;
 
 function init() {
   document.querySelectorAll('.level-btn').forEach(btn => {
@@ -328,11 +339,27 @@ function init() {
   renderHistory();
 }
 
+function splitSentences(text) {
+  // Split on sentence-ending punctuation, keeping the punctuation with the sentence
+  return text.match(/[^.!?]+[.!?]+/g)?.map(s => s.trim()).filter(Boolean) || [text];
+}
+
 function newPassage() {
   const passages = PASSAGES[currentLevel];
   currentText = passages[Math.floor(Math.random() * passages.length)];
-  document.getElementById('readingText').textContent = currentText;
+  sentences = splitSentences(currentText);
+  currentSentenceIdx = 0;
+  renderPassageWithHighlight(-1);
   hideResults();
+}
+
+function renderPassageWithHighlight(activeIdx) {
+  const el = document.getElementById('readingText');
+  el.innerHTML = sentences.map((s, i) => {
+    if (i < activeIdx) return `<span class="sentence-done">${s}</span>`;
+    if (i === activeIdx) return `<span class="sentence-active">${s}</span>`;
+    return `<span class="sentence-upcoming">${s}</span>`;
+  }).join(' ');
 }
 
 function hideResults() {
@@ -343,155 +370,213 @@ function hideResults() {
   document.getElementById('status').className = 'status';
 }
 
-async function startReading() {
+function createSpeechConfig() {
   const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
   speechConfig.speechRecognitionLanguage = 'en-US';
-
-  // Give kids more time to pause between words/sentences
   speechConfig.setProperty(SpeechSDK.PropertyId.Speech_SegmentationSilenceTimeoutMs, "3000");
   speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "5000");
-
-  // Optimize for children's voices
   speechConfig.setProperty("SpeechServiceConnection_ChildSpeech", "true");
+  return speechConfig;
+}
 
-  // Use microphone with noise suppression and auto gain
-  const stream = await navigator.mediaDevices.getUserMedia({
-    audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
-  });
-  window._writerlyStream = stream;
-  const audioConfig = SpeechSDK.AudioConfig.fromStreamInput(stream);
-
-  const pronConfig = new SpeechSDK.PronunciationAssessmentConfig(
-    currentText,
-    SpeechSDK.PronunciationAssessmentGradingSystem.HundredMark,
-    SpeechSDK.PronunciationAssessmentGranularity.Phoneme,
-    true
-  );
-  pronConfig.enableProsodyAssessment = true;
-
-  recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
-  pronConfig.applyTo(recognizer);
-
+async function startReading() {
   // Reset accumulators
   allRecognizedWords = [];
   allRecognizedText = '';
   finalPronScores = { accuracy: 0, fluency: 0, completeness: 0, prosody: 0, overall: 0 };
   pronScoreWeights = 0;
+  currentSentenceIdx = 0;
+  isReading = true;
 
   document.getElementById('btnStart').disabled = true;
   document.getElementById('btnFinish').disabled = false;
-  document.getElementById('status').textContent = 'Listening... read the full passage, then click "Finish Reading"';
-  document.getElementById('status').className = 'status recording';
   hideResults();
 
-  // Collect partial results as they come in
-  recognizer.recognized = function (s, e) {
-    if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
-      allRecognizedText += (allRecognizedText ? ' ' : '') + e.result.text;
+  // Get microphone with noise suppression
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
+  });
+  window._writerlyStream = stream;
 
-      // Accumulate word-level data
-      try {
-        const json = JSON.parse(e.result.properties.getProperty(
-          SpeechSDK.PropertyId.SpeechServiceResponse_JsonResult
-        ));
-        const nBest = json.NBest && json.NBest[0];
-        if (nBest && nBest.Words) {
-          allRecognizedWords = allRecognizedWords.concat(nBest.Words);
+  // Process sentences one by one
+  for (let i = 0; i < sentences.length; i++) {
+    if (!isReading) break;
+    currentSentenceIdx = i;
+    renderPassageWithHighlight(i);
+
+    const sentenceNum = i + 1;
+    const totalSentences = sentences.length;
+    document.getElementById('status').innerHTML =
+      `<span style="color:var(--red);animation:pulse 1.5s infinite">Recording...</span> ` +
+      `<span style="color:var(--muted)">Sentence ${sentenceNum} of ${totalSentences} — read the highlighted sentence</span>`;
+
+    try {
+      const result = await assessSentence(sentences[i], stream);
+      if (result) {
+        allRecognizedText += (allRecognizedText ? ' ' : '') + result.text;
+        allRecognizedWords = allRecognizedWords.concat(result.words);
+        const w = result.words.length || 1;
+        finalPronScores.accuracy += result.scores.accuracy * w;
+        finalPronScores.fluency += result.scores.fluency * w;
+        finalPronScores.completeness += result.scores.completeness * w;
+        finalPronScores.prosody += result.scores.prosody * w;
+        finalPronScores.overall += result.scores.overall * w;
+        pronScoreWeights += w;
+      }
+    } catch (err) {
+      console.error('Sentence assessment error:', err);
+    }
+  }
+
+  // All sentences done — show results
+  if (isReading) {
+    renderPassageWithHighlight(sentences.length); // all green
+    showFinalResults();
+  }
+
+  releaseStream();
+  resetControls();
+  isReading = false;
+}
+
+function assessSentence(sentence, stream) {
+  return new Promise((resolve, reject) => {
+    const speechConfig = createSpeechConfig();
+    const audioConfig = SpeechSDK.AudioConfig.fromStreamInput(stream);
+
+    const pronConfig = new SpeechSDK.PronunciationAssessmentConfig(
+      sentence,
+      SpeechSDK.PronunciationAssessmentGradingSystem.HundredMark,
+      SpeechSDK.PronunciationAssessmentGranularity.Phoneme,
+      true
+    );
+    pronConfig.enableProsodyAssessment = true;
+
+    const rec = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+    pronConfig.applyTo(rec);
+    recognizer = rec; // store so finishReading/stopReading can cancel
+
+    let sentenceWords = [];
+    let sentenceText = '';
+    let sentenceScores = { accuracy: 0, fluency: 0, completeness: 0, prosody: 0, overall: 0 };
+    let scoreCount = 0;
+
+    rec.recognized = function (s, e) {
+      if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
+        sentenceText += (sentenceText ? ' ' : '') + e.result.text;
+        try {
+          const json = JSON.parse(e.result.properties.getProperty(
+            SpeechSDK.PropertyId.SpeechServiceResponse_JsonResult
+          ));
+          const nBest = json.NBest && json.NBest[0];
+          if (nBest && nBest.Words) {
+            sentenceWords = sentenceWords.concat(nBest.Words);
+          }
+          if (nBest && nBest.PronunciationAssessment) {
+            const pa = nBest.PronunciationAssessment;
+            const w = nBest.Words ? nBest.Words.length : 1;
+            sentenceScores.accuracy += (pa.AccuracyScore || 0) * w;
+            sentenceScores.fluency += (pa.FluencyScore || 0) * w;
+            sentenceScores.completeness += (pa.CompletenessScore || 0) * w;
+            sentenceScores.prosody += (pa.ProsodyScore || 0) * w;
+            sentenceScores.overall += (pa.PronScore || 0) * w;
+            scoreCount += w;
+          }
+        } catch (err) { /* ignore */ }
+
+        // Auto-advance: if we've heard enough words for this sentence, stop
+        const expectedWords = sentence.split(/\s+/).length;
+        const heardWords = sentenceText.split(/\s+/).filter(Boolean).length;
+        if (heardWords >= expectedWords) {
+          rec.stopContinuousRecognitionAsync(() => {}, () => {});
         }
-        if (nBest && nBest.PronunciationAssessment) {
-          const pa = nBest.PronunciationAssessment;
-          // Weight scores by word count so longer segments count more
-          const segmentWords = nBest.Words ? nBest.Words.length : 1;
-          finalPronScores.accuracy += (pa.AccuracyScore || 0) * segmentWords;
-          finalPronScores.fluency += (pa.FluencyScore || 0) * segmentWords;
-          finalPronScores.completeness += (pa.CompletenessScore || 0) * segmentWords;
-          finalPronScores.prosody += (pa.ProsodyScore || 0) * segmentWords;
-          finalPronScores.overall += (pa.PronScore || 0) * segmentWords;
-          pronScoreWeights += segmentWords;
-        }
-      } catch (err) { /* ignore parse errors */ }
+      }
+    };
 
-      // Update live word count
-      const wordsSoFar = allRecognizedText.split(/\s+/).filter(Boolean).length;
-      const totalWords = currentText.split(/\s+/).length;
-      document.getElementById('status').innerHTML =
-        `<span style="color:var(--red);animation:pulse 1.5s infinite">Recording...</span> ` +
-        `<span style="color:var(--muted)">${wordsSoFar} / ${totalWords} words heard</span>`;
-    }
-  };
+    rec.sessionStopped = function () {
+      rec.close();
+      if (scoreCount > 0) {
+        resolve({
+          text: sentenceText,
+          words: sentenceWords,
+          scores: {
+            accuracy: sentenceScores.accuracy / scoreCount,
+            fluency: sentenceScores.fluency / scoreCount,
+            completeness: sentenceScores.completeness / scoreCount,
+            prosody: sentenceScores.prosody / scoreCount,
+            overall: sentenceScores.overall / scoreCount,
+          }
+        });
+      } else {
+        resolve(sentenceText ? { text: sentenceText, words: sentenceWords, scores: { accuracy: 0, fluency: 0, completeness: 0, prosody: 0, overall: 0 } } : null);
+      }
+    };
 
-  recognizer.canceled = function (s, e) {
-    if (e.reason === SpeechSDK.CancellationReason.Error) {
-      setStatus('Error: ' + e.errorDetails);
-      resetControls();
-    }
-  };
+    rec.canceled = function (s, e) {
+      rec.close();
+      if (e.reason === SpeechSDK.CancellationReason.Error) {
+        reject(new Error(e.errorDetails));
+      } else {
+        resolve(null);
+      }
+    };
 
-  recognizer.startContinuousRecognitionAsync(
-    function () { /* started */ },
-    function (err) {
-      setStatus('Error starting: ' + err);
-      resetControls();
-    }
-  );
+    rec.startContinuousRecognitionAsync(
+      function () { /* started */ },
+      function (err) { reject(err); }
+    );
+  });
+}
+
+function showFinalResults() {
+  if (allRecognizedWords.length > 0 && pronScoreWeights > 0) {
+    const avgScores = {
+      accuracyScore: finalPronScores.accuracy / pronScoreWeights,
+      fluencyScore: finalPronScores.fluency / pronScoreWeights,
+      completenessScore: finalPronScores.completeness / pronScoreWeights,
+      prosodyScore: finalPronScores.prosody / pronScoreWeights,
+      pronunciationScore: finalPronScores.overall / pronScoreWeights,
+    };
+    displayResultsFromContinuous(avgScores, allRecognizedWords, allRecognizedText);
+  } else {
+    setStatus('No speech detected. Please try again.');
+  }
 }
 
 function finishReading() {
-  if (!recognizer) return;
-
+  // Stop the sentence loop and force results from what we have so far
+  isReading = false;
   document.getElementById('btnFinish').disabled = true;
   setStatus('Analyzing your reading...');
 
-  recognizer.stopContinuousRecognitionAsync(
-    function () {
-      // Build final results
-      if (allRecognizedWords.length > 0 && pronScoreWeights > 0) {
-        const avgScores = {
-          accuracyScore: finalPronScores.accuracy / pronScoreWeights,
-          fluencyScore: finalPronScores.fluency / pronScoreWeights,
-          completenessScore: finalPronScores.completeness / pronScoreWeights,
-          prosodyScore: finalPronScores.prosody / pronScoreWeights,
-          pronunciationScore: finalPronScores.overall / pronScoreWeights,
-        };
-        displayResultsFromContinuous(avgScores, allRecognizedWords, allRecognizedText);
-      } else {
-        setStatus('No speech detected. Please try again.');
-      }
-      recognizer.close();
-      recognizer = null;
-      if (window._writerlyStream) {
-        window._writerlyStream.getTracks().forEach(t => t.stop());
-        window._writerlyStream = null;
-      }
-      resetControls();
-    },
-    function (err) {
-      setStatus('Error stopping: ' + err);
-      recognizer.close();
-      recognizer = null;
-      if (window._writerlyStream) {
-        window._writerlyStream.getTracks().forEach(t => t.stop());
-        window._writerlyStream = null;
-      }
-      resetControls();
-    }
-  );
-}
-
-function stopReading() {
   if (recognizer) {
     recognizer.stopContinuousRecognitionAsync(
       function () { recognizer.close(); recognizer = null; },
       function () { recognizer.close(); recognizer = null; }
     );
   }
-  // Release microphone
+
+  // Results are shown by the startReading loop when it exits
+}
+
+function stopReading() {
+  isReading = false;
+  if (recognizer) {
+    recognizer.stopContinuousRecognitionAsync(
+      function () { recognizer.close(); recognizer = null; },
+      function () { recognizer.close(); recognizer = null; }
+    );
+  }
+  releaseStream();
+  resetControls();
+  setStatus('Stopped.');
+}
+
+function releaseStream() {
   if (window._writerlyStream) {
     window._writerlyStream.getTracks().forEach(t => t.stop());
     window._writerlyStream = null;
   }
-  resetControls();
-  setStatus('Stopped.');
 }
 
 function resetControls() {
