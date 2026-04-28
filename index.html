@@ -456,8 +456,9 @@
       <div class="action-label" style="color:var(--emerald-500)">Practice words!</div>
     </div>
     <div class="screen-bottom hidden" id="resultsButtons">
-      <button class="btn btn-green" id="btnPracticeNew" onclick="goToPractice()">Practice new words</button>
-      <button class="btn btn-outline" onclick="tryNewText()">Try a new text &#8594;</button>
+      <button class="btn btn-green hidden" id="btnPracticeNew" onclick="goToPractice()">Practice new words</button>
+      <button class="btn btn-primary hidden" id="btnReRead" onclick="readSameText()">Read same text again &#8634;</button>
+      <button class="btn btn-outline" id="btnNewText" onclick="tryNewText()">Try a new text &#8594;</button>
     </div>
   </div>
 
@@ -794,11 +795,16 @@ function showResults() {
   } : { overall: 0, accuracy: 0, completeness: 0 };
 
   // Banner
-  const isImproved = previousScores && scores.overall > previousScores.overall;
-  document.getElementById('resultsTitle').innerHTML = isImproved
-    ? '&#11088; Getting better!' : '&#11088; Good job!';
-  document.getElementById('resultsSubtitle').textContent = isImproved
-    ? 'Here are your new results:' : 'Here are your results:';
+  const isReAttempt = previousScores != null;
+  const isImproved = isReAttempt && scores.overall >= previousScores.overall;
+  if (isReAttempt) {
+    document.getElementById('resultsTitle').innerHTML = isImproved
+      ? '&#11088; Getting better!' : '&#11088; Keep going!';
+    document.getElementById('resultsSubtitle').textContent = 'Here are your new results:';
+  } else {
+    document.getElementById('resultsTitle').innerHTML = '&#11088; Good job!';
+    document.getElementById('resultsSubtitle').textContent = 'Here are your results:';
+  }
 
   // Scores
   const scoresRow = document.getElementById('scoresRow');
@@ -853,7 +859,7 @@ function showResults() {
   const chipsEl = document.getElementById('practiceChips');
   if (practiceWords.length > 0) {
     practiceLabel.classList.remove('hidden');
-    practiceLabel.textContent = isImproved ? 'New words to practice:' : 'Words to practice:';
+    practiceLabel.textContent = isReAttempt ? 'New words to practice:' : 'Words to practice:';
     chipsEl.innerHTML = practiceWords.slice(0, 6).map(w =>
       `<span class="chip-red">${w}</span>`
     ).join('');
@@ -865,20 +871,31 @@ function showResults() {
   // Bottom actions
   const resultsAction = document.getElementById('resultsAction');
   const resultsButtons = document.getElementById('resultsButtons');
-  if (practiceWords.length > 0) {
+  const btnPracticeNew = document.getElementById('btnPracticeNew');
+  const btnReRead = document.getElementById('btnReRead');
+
+  if (!isReAttempt && practiceWords.length > 0) {
+    // First read with practice words: big green arrow to practice
     resultsAction.classList.remove('hidden');
     resultsButtons.classList.add('hidden');
   } else {
+    // Re-attempt OR first read with no practice words: show button list
     resultsAction.classList.add('hidden');
     resultsButtons.classList.remove('hidden');
-    document.getElementById('btnPracticeNew').classList.add('hidden');
-  }
 
-  // Show re-read buttons if this is a re-attempt
-  if (isImproved && practiceWords.length > 0) {
-    resultsAction.classList.add('hidden');
-    resultsButtons.classList.remove('hidden');
-    document.getElementById('btnPracticeNew').classList.remove('hidden');
+    // Show "Practice new words" if there are words to practice
+    if (practiceWords.length > 0) {
+      btnPracticeNew.classList.remove('hidden');
+    } else {
+      btnPracticeNew.classList.add('hidden');
+    }
+
+    // Show "Read same text again" if no practice words (perfect!) or always on re-attempts
+    if (practiceWords.length === 0 || isReAttempt) {
+      btnReRead.classList.remove('hidden');
+    } else {
+      btnReRead.classList.add('hidden');
+    }
   }
 
   previousScores = { ...scores };
