@@ -216,29 +216,31 @@
     opacity: 0.4; animation: wave 1.2s ease-in-out infinite;
   }
   .wave-bar:nth-child(odd) { background: #F472B6; }
-  .wave-bar:nth-child(1) { animation-delay: 0s; }
-  .wave-bar:nth-child(2) { animation-delay: 0.1s; }
-  .wave-bar:nth-child(3) { animation-delay: 0.2s; }
-  .wave-bar:nth-child(4) { animation-delay: 0.3s; }
-  .wave-bar:nth-child(5) { animation-delay: 0.4s; }
-  .wave-bar:nth-child(6) { animation-delay: 0.5s; }
-  .wave-bar:nth-child(7) { animation-delay: 0.6s; }
-  .wave-bar:nth-child(8) { animation-delay: 0.7s; }
-  .wave-bar:nth-child(9) { animation-delay: 0.8s; }
-  .wave-bar:nth-child(10) { animation-delay: 0.9s; }
-  .wave-bar:nth-child(11) { animation-delay: 1.0s; }
-  .wave-bar:nth-child(12) { animation-delay: 1.1s; }
   @keyframes wave {
     0%, 100% { height: 8px; }
     50% { height: 28px; }
   }
 
-  /* Static wave decoration */
-  .wave-decoration {
+  /* Live voice visualizer */
+  .voice-visualizer {
     display: flex; align-items: center; justify-content: center;
-    height: 30px; gap: 3px; margin-top: 16px; opacity: 0.3;
+    height: 70px; gap: 3px; margin-top: 12px;
   }
-  .wave-decoration .wave-bar { animation: none; }
+  .voice-visualizer .v-bar {
+    width: 5px; border-radius: 3px; min-height: 4px;
+    transition: height 0.07s ease-out;
+  }
+  .voice-visualizer .v-bar:nth-child(odd) { background: var(--indigo-500); }
+  .voice-visualizer .v-bar:nth-child(even) { background: #F472B6; }
+
+  /* Silent state hint */
+  .voice-hint {
+    text-align: center; font-size: 13px; color: var(--slate-500);
+    margin-top: 4px; font-weight: 500; min-height: 18px;
+  }
+  .voice-hint-active { color: var(--emerald-500); font-weight: 600; }
+
+  /* (removed static wave decoration — replaced by voice-visualizer) */
 
   /* Score Cards */
   .scores-row {
@@ -349,13 +351,7 @@
     50% { opacity: 0.3; transform: scale(0.7); }
   }
 
-  /* Bigger waveform when recording */
-  .waveform-recording {
-    height: 60px !important;
-  }
-  .waveform-recording .wave-bar {
-    width: 5px; opacity: 0.7;
-  }
+  /* (removed waveform-recording — replaced by live voice-visualizer) */
 
   /* Practice word nav */
   .practice-nav {
@@ -416,14 +412,8 @@
         <div class="passage-label">&#128214; Your passage:</div>
         <div class="passage-text" id="passageText"></div>
       </div>
-      <div class="wave-decoration" id="waveDecoration">
-        <div class="wave-bar" style="height:10px"></div><div class="wave-bar" style="height:18px"></div>
-        <div class="wave-bar" style="height:12px"></div><div class="wave-bar" style="height:24px"></div>
-        <div class="wave-bar" style="height:16px"></div><div class="wave-bar" style="height:20px"></div>
-        <div class="wave-bar" style="height:14px"></div><div class="wave-bar" style="height:22px"></div>
-        <div class="wave-bar" style="height:10px"></div><div class="wave-bar" style="height:18px"></div>
-        <div class="wave-bar" style="height:14px"></div><div class="wave-bar" style="height:20px"></div>
-      </div>
+      <div class="voice-visualizer" id="voiceVisualizer"></div>
+      <div class="voice-hint" id="voiceHint"></div>
       <div class="word-counter hidden" id="wordCounter"></div>
     </div>
     <div class="action-area" id="readingAction">
@@ -472,13 +462,8 @@
         <button class="speaker-btn" onclick="speakWord()">&#128266;</button>
         <div class="word-practice-text" id="practiceWordText"></div>
       </div>
-      <div class="wave-decoration" id="practiceWaveDecor">
-        <div class="wave-bar" style="height:10px"></div><div class="wave-bar" style="height:18px"></div>
-        <div class="wave-bar" style="height:12px"></div><div class="wave-bar" style="height:24px"></div>
-        <div class="wave-bar" style="height:16px"></div><div class="wave-bar" style="height:20px"></div>
-        <div class="wave-bar" style="height:14px"></div><div class="wave-bar" style="height:22px"></div>
-        <div class="wave-bar" style="height:10px"></div><div class="wave-bar" style="height:18px"></div>
-      </div>
+      <div class="voice-visualizer" id="practiceVisualizer"></div>
+      <div class="voice-hint" id="practiceVoiceHint"></div>
     </div>
     <div class="action-area" id="practiceAction">
       <div class="practice-nav">
@@ -492,17 +477,18 @@
 
   <!-- ===== SCREEN 5: Practice Complete ===== -->
   <div class="screen" id="screenPracticeDone">
-    <div class="banner banner-green">
-      <h3>&#127881; Great work!</h3>
-      <p>You practiced all the words!</p>
+    <div class="banner banner-green" id="practiceDoneBanner">
+      <h3 id="practiceDoneTitle">&#127881; Great work!</h3>
+      <p id="practiceDoneSubtitle">You practiced all the words!</p>
     </div>
     <div class="screen-content" style="align-items:center;">
-      <div class="section-label">Words mastered:</div>
+      <div class="section-label" id="masteredLabel">Words mastered:</div>
       <div class="mastered-list" id="masteredList"></div>
       <div class="section-sublabel" style="margin-top:24px;">What would you like to do next?</div>
     </div>
     <div class="screen-bottom">
       <button class="btn btn-primary" onclick="readSameText()">Read same text again &#8634;</button>
+      <button class="btn btn-outline" onclick="goBackToResults()">Back to results &#8592;</button>
       <button class="btn btn-outline" onclick="tryNewText()">Try a new text &#8594;</button>
     </div>
   </div>
@@ -612,16 +598,19 @@ function resetReadingUI() {
   document.getElementById('wordCounter').classList.add('hidden');
   document.getElementById('listeningIndicator').classList.add('hidden');
   document.getElementById('recordingOverlay').className = 'hidden';
+  document.getElementById('voiceHint').textContent = '';
+  initStaticVisualizer('voiceVisualizer');
+}
 
-  // Replace waveform with static decoration
-  const wd = document.getElementById('waveDecoration');
-  wd.innerHTML = '';
-  wd.classList.remove('waveform-recording');
-  for (let i = 0; i < 12; i++) {
+function initStaticVisualizer(containerId) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  for (let i = 0; i < 20; i++) {
     const bar = document.createElement('div');
-    bar.className = 'wave-bar';
-    bar.style.height = (8 + Math.random() * 18) + 'px';
-    wd.appendChild(bar);
+    bar.className = 'v-bar';
+    bar.style.height = (4 + Math.random() * 12) + 'px';
+    bar.style.opacity = '0.25';
+    el.appendChild(bar);
   }
 }
 
@@ -647,17 +636,6 @@ async function startReading() {
   const overlay = document.getElementById('recordingOverlay');
   overlay.className = 'recording-overlay';
 
-  // Animated waveform — bigger when recording
-  const wd = document.getElementById('waveDecoration');
-  wd.innerHTML = '';
-  wd.classList.add('waveform-recording');
-  for (let i = 0; i < 16; i++) {
-    const bar = document.createElement('div');
-    bar.className = 'wave-bar';
-    bar.style.animationDelay = (i * 0.08) + 's';
-    wd.appendChild(bar);
-  }
-
   // Highlight first sentence
   renderPassageHighlight(0);
 
@@ -665,6 +643,9 @@ async function startReading() {
     audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
   });
   window._stream = stream;
+
+  // Init live voice visualizer (after stream is ready)
+  initLiveVisualizer('voiceVisualizer', 'voiceHint');
 
   const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
   speechConfig.speechRecognitionLanguage = 'en-US';
@@ -779,6 +760,7 @@ function stopRecording() {
 }
 
 function releaseStream() {
+  stopVisualizer();
   if (window._stream) {
     window._stream.getTracks().forEach(t => t.stop());
     window._stream = null;
@@ -926,16 +908,9 @@ function showPracticeWord() {
   document.getElementById('practiceLabel2').textContent = 'Tap to speak';
   document.getElementById('practiceLabel2').className = 'action-label';
 
-  // Static wave
-  const wd = document.getElementById('practiceWaveDecor');
-  wd.innerHTML = '';
-  wd.classList.remove('waveform-recording');
-  for (let i = 0; i < 10; i++) {
-    const bar = document.createElement('div');
-    bar.className = 'wave-bar';
-    bar.style.height = (8 + Math.random() * 18) + 'px';
-    wd.appendChild(bar);
-  }
+  // Static visualizer
+  document.getElementById('practiceVoiceHint').textContent = '';
+  initStaticVisualizer('practiceVisualizer');
 }
 
 function speakWord() {
@@ -956,22 +931,14 @@ async function startWordPractice() {
   document.getElementById('practiceLabel2').textContent = 'Stop';
   document.getElementById('practiceLabel2').className = 'action-label action-label-red';
 
-  // Animate waves — bigger when recording
-  const wd = document.getElementById('practiceWaveDecor');
-  wd.innerHTML = '';
-  wd.classList.add('waveform-recording');
-  for (let i = 0; i < 14; i++) {
-    const bar = document.createElement('div');
-    bar.className = 'wave-bar';
-    bar.style.animationDelay = (i * 0.08) + 's';
-    wd.appendChild(bar);
-  }
-
   const word = practiceWords[currentPracticeIdx];
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
   });
   window._stream = stream;
+
+  // Init live voice visualizer (after stream ready)
+  initLiveVisualizer('practiceVisualizer', 'practiceVoiceHint');
 
   const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
   speechConfig.speechRecognitionLanguage = 'en-US';
@@ -1060,6 +1027,12 @@ function showPracticeDone() {
   showScreen('screenPracticeDone');
 }
 
+function goBackToResults() {
+  // Pop practice screens from history and go back to results
+  screenHistory = screenHistory.filter(s => s !== 'screenPractice');
+  showScreen('screenResults');
+}
+
 // ===== RE-READ & NEW TEXT =====
 function readSameText() {
   screenHistory = ['screenGrade'];
@@ -1074,6 +1047,87 @@ function tryNewText() {
   screenHistory = ['screenGrade'];
   showScreen('screenReading');
   resetReadingUI();
+}
+
+// ===== LIVE VOICE VISUALIZER =====
+let audioCtx = null;
+let analyserNode = null;
+let visualizerRAF = null;
+
+function initLiveVisualizer(containerId, hintId) {
+  const container = document.getElementById(containerId);
+  const hint = document.getElementById(hintId);
+  container.innerHTML = '';
+
+  const barCount = 24;
+  for (let i = 0; i < barCount; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'v-bar';
+    bar.style.height = '4px';
+    container.appendChild(bar);
+  }
+
+  hint.textContent = 'Start speaking...';
+  hint.className = 'voice-hint';
+
+  // Connect to mic stream
+  if (!window._stream) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const source = audioCtx.createMediaStreamSource(window._stream);
+  analyserNode = audioCtx.createAnalyser();
+  analyserNode.fftSize = 64;
+  analyserNode.smoothingTimeConstant = 0.7;
+  source.connect(analyserNode);
+
+  const dataArray = new Uint8Array(analyserNode.frequencyBinCount);
+  const bars = container.querySelectorAll('.v-bar');
+  let silenceFrames = 0;
+
+  function draw() {
+    visualizerRAF = requestAnimationFrame(draw);
+    analyserNode.getByteFrequencyData(dataArray);
+
+    // Calculate overall volume
+    let sum = 0;
+    for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+    const avg = sum / dataArray.length;
+
+    const isSpeaking = avg > 15;
+    if (isSpeaking) {
+      silenceFrames = 0;
+      hint.textContent = 'I can hear you!';
+      hint.className = 'voice-hint voice-hint-active';
+    } else {
+      silenceFrames++;
+      if (silenceFrames > 60) {
+        hint.textContent = 'Speak louder...';
+        hint.className = 'voice-hint';
+      }
+    }
+
+    // Map frequency data to bars
+    const step = Math.floor(dataArray.length / barCount);
+    for (let i = 0; i < barCount; i++) {
+      const val = dataArray[Math.min(i * step, dataArray.length - 1)];
+      const height = Math.max(4, (val / 255) * 65);
+      const opacity = Math.max(0.25, val / 255);
+      bars[i].style.height = height + 'px';
+      bars[i].style.opacity = opacity;
+    }
+  }
+  draw();
+}
+
+function stopVisualizer() {
+  if (visualizerRAF) {
+    cancelAnimationFrame(visualizerRAF);
+    visualizerRAF = null;
+  }
+  if (audioCtx) {
+    audioCtx.close().catch(() => {});
+    audioCtx = null;
+  }
+  analyserNode = null;
 }
 
 // ===== WER (kept for transcript comparison) =====
