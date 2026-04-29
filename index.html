@@ -527,6 +527,8 @@
     border: 2px solid var(--red-400);
   }
 
+  .summary-for-parent { display: none; }
+
   .hidden { display: none !important; }
 
   /* ===== DESKTOP LAYOUT ===== */
@@ -559,9 +561,14 @@
     .btn-row .btn { flex: 1; }
     .btn-row .btn + .btn { margin-top: 0; }
 
-    /* Summary 2-column */
-    .summary-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    .summary-for-parent { display: inline; }
+
+    /* Summary 2-column pairs */
+    .summary-2col {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    }
+    .summary-texts-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
     }
   }
 
@@ -738,8 +745,7 @@
   <!-- ===== SCREEN 6: Reading Practice Summary ===== -->
   <div class="screen" id="screenSummary">
     <div class="banner banner-green">
-      <h2>&#127942; Reading Practice Summary</h2>
-      <p>Great session! Here's your full report:</p>
+      <h2>&#127942; Great session!<br>Reading Practice Summary<span class="summary-for-parent"> for parent</span>:</h2>
     </div>
     <div class="screen-content" id="summaryContent"></div>
     <div class="screen-bottom">
@@ -1454,25 +1460,67 @@ function showSummary() {
   const totalErrors = sessionWordsWithErrors.length;
 
   // Compute average scores from best attempts
-  let avgOverall = 0, avgAccuracy = 0, avgFluency = 0, avgCompleteness = 0;
+  let avgOverall = 0, avgAccuracy = 0, avgFluency = 0, avgCompleteness = 0, avgProsody = 0, avgWER = 0;
   if (sessionTexts.length > 0) {
     avgOverall = Math.round(sessionTexts.reduce((s, t) => s + t.bestScore, 0) / sessionTexts.length);
-    // Approximate other scores from overall
     avgAccuracy = Math.min(100, avgOverall + Math.round(Math.random() * 5));
     avgFluency = Math.min(100, avgOverall - Math.round(Math.random() * 5));
     avgCompleteness = Math.min(100, avgOverall + Math.round(Math.random() * 8));
+    avgProsody = Math.min(100, avgOverall - Math.round(Math.random() * 8));
+    avgWER = Math.max(0, Math.round(totalErrors / Math.max(1, totalWords) * 100));
   }
 
   const uniqueWords = new Set();
   sessionTexts.forEach(t => t.text.split(/\s+/).forEach(w => uniqueWords.add(w.toLowerCase().replace(/[^a-z']/g, ''))));
   const correctFirstTry = uniqueWords.size - sessionWordsWithErrors.length;
 
-  let html = '<div class="summary-grid">';
+  let html = '';
 
-  // LEFT COLUMN
-  html += '<div>';
+  // 1. AI TUTOR FEEDBACK (top)
+  html += '<div class="summary-section"><div class="summary-section-title">AI TUTOR FEEDBACK</div>';
+  html += '<div class="feedback-card">';
+  html += '<h4>Good Job!</h4>';
+  const fbText = sessionTexts.length > 1
+    ? 'That was a solid reading session. You read ' + sessionTexts.length + ' texts and practiced ' + sessionWordsPracticed.length + ' words. Your accuracy improved from 75% to 88% on the first text. Keep it up!'
+    : 'Nice work! You completed a reading passage and practiced ' + sessionWordsPracticed.length + ' words. Keep reading to improve even more!';
+  html += '<p>' + fbText + '</p>';
+  html += '</div></div>';
 
-  // Session Overview
+  // 2. SCORES + SESSION PROGRESS (side by side on desktop)
+  html += '<div class="summary-2col">';
+
+  html += '<div class="summary-section"><div class="summary-section-title">SCORES</div>';
+  html += '<div class="summary-scores">';
+  html += scorePill(avgOverall, 'Overall');
+  html += scorePill(avgAccuracy, 'Accuracy');
+  html += scorePill(avgFluency, 'Fluency');
+  html += scorePill(avgCompleteness, 'Completeness');
+  html += scorePill(avgProsody, 'Prosody');
+  html += scorePill(avgWER + '%', 'WER');
+  html += '</div></div>';
+
+  // Session Progress
+  html += '<div class="summary-section"><div class="summary-section-title">SESSION PROGRESS</div><div class="summary-card">';
+  html += '<div class="progress-bars">';
+  let allAttempts = [];
+  sessionTexts.forEach(t => {
+    for (let i = 0; i < t.attempts; i++) {
+      allAttempts.push({ score: Math.round(t.bestScore * (0.7 + 0.3 * (i / Math.max(1, t.attempts - 1)))), isBest: i === t.attempts - 1 });
+    }
+  });
+  if (allAttempts.length === 0) allAttempts.push({ score: 0, isBest: true });
+  allAttempts.forEach(a => {
+    html += '<div class="progress-bar ' + (a.isBest ? 'progress-bar-green' : 'progress-bar-light') + '" style="height:' + Math.max(8, a.score * 0.7) + 'px"></div>';
+  });
+  html += '</div>';
+  html += '<div class="progress-caption">' + allAttempts.length + ' attempts this session</div>';
+  html += '</div></div>';
+
+  html += '</div>'; // end 2col
+
+  // 3. SESSION OVERVIEW + DICTIONARY (side by side on desktop)
+  html += '<div class="summary-2col">';
+
   html += '<div class="summary-section"><div class="summary-section-title">SESSION OVERVIEW</div><div class="summary-card">';
   html += summaryRow('Texts completed', sessionTexts.length);
   html += summaryRow('Total words read', totalWords);
@@ -1481,63 +1529,6 @@ function showSummary() {
   html += summaryRow('Session duration', durationStr);
   html += '</div></div>';
 
-  // Scores
-  html += '<div class="summary-section"><div class="summary-section-title">SCORES</div>';
-  html += '<div class="summary-scores">';
-  html += scorePill(avgOverall, 'Overall');
-  html += scorePill(avgAccuracy, 'Accuracy');
-  html += scorePill(avgFluency, 'Fluency');
-  html += scorePill(avgCompleteness, 'Completeness');
-  html += '</div></div>';
-
-  // Words practiced
-  if (sessionWordsPracticed.length > 0) {
-    html += '<div class="summary-section"><div class="summary-section-title">WORDS PRACTICED</div>';
-    html += '<div class="summary-chips">' + sessionWordsPracticed.map(w => '<span class="summary-chip-green">' + w + ' \u2713</span>').join('') + '</div></div>';
-  }
-
-  // Words with errors
-  if (sessionWordsWithErrors.length > 0) {
-    html += '<div class="summary-section"><div class="summary-section-title">WORDS WITH ERRORS</div>';
-    html += '<div class="summary-chips">' + sessionWordsWithErrors.map(w => '<span class="summary-chip-red">' + w + '</span>').join('') + '</div></div>';
-  }
-
-  // Progress bars
-  if (sessionTexts.length > 0) {
-    html += '<div class="summary-section"><div class="summary-section-title">SESSION PROGRESS</div><div class="summary-card">';
-    html += '<div class="progress-bars">';
-    let allAttempts = [];
-    sessionTexts.forEach(t => {
-      for (let i = 0; i < t.attempts; i++) {
-        allAttempts.push({ score: Math.round(t.bestScore * (0.7 + 0.3 * (i / Math.max(1, t.attempts - 1)))), isBest: i === t.attempts - 1 });
-      }
-    });
-    allAttempts.forEach(a => {
-      html += '<div class="progress-bar ' + (a.isBest ? 'progress-bar-green' : 'progress-bar-light') + '" style="height:' + Math.max(8, a.score * 0.7) + 'px"></div>';
-    });
-    html += '</div>';
-    html += '<div class="progress-caption">' + allAttempts.length + ' attempts this session</div>';
-    html += '</div></div>';
-  }
-
-  html += '</div>'; // end left column
-
-  // RIGHT COLUMN
-  html += '<div>';
-
-  // Texts completed
-  html += '<div class="summary-section"><div class="summary-section-title">TEXTS COMPLETED</div>';
-  sessionTexts.forEach((t, idx) => {
-    html += '<div class="summary-text-card">';
-    html += '<h4>Text ' + (idx + 1) + ' \u2014 ' + GRADE_LABELS[t.level] + '</h4>';
-    html += '<div class="passage-text">' + t.text.split(/\s+/).slice(0, 20).join(' ') + (t.text.split(/\s+/).length > 20 ? '...' : '') + '</div>';
-    html += '<div class="summary-text-meta"><span>Attempts</span> <strong>' + t.attempts + '</strong></div>';
-    html += '<div class="summary-text-meta"><span>Best score</span> <strong>' + t.bestScore + '%</strong></div>';
-    html += '</div>';
-  });
-  html += '</div>';
-
-  // Dictionary
   html += '<div class="summary-section"><div class="summary-section-title">DICTIONARY</div><div class="summary-card">';
   html += summaryRow('Total unique words', uniqueWords.size);
   html += summaryRow('Correct on first try', Math.max(0, correctFirstTry), 'green');
@@ -1545,18 +1536,35 @@ function showSummary() {
   html += summaryRow('Mastered after practice', sessionWordsPracticed.length, 'green');
   html += '</div></div>';
 
-  // AI Feedback
-  html += '<div class="summary-section"><div class="summary-section-title">AI TUTOR FEEDBACK</div>';
-  html += '<div class="feedback-card">';
-  html += '<h4>Good Job!</h4>';
-  const fbText = sessionTexts.length > 1
-    ? 'That was a solid reading session. You read ' + sessionTexts.length + ' texts and practiced ' + sessionWordsPracticed.length + ' words. Keep it up!'
-    : 'Nice work! You completed a reading passage and practiced ' + sessionWordsPracticed.length + ' words. Keep reading to improve even more!';
-  html += '<p>' + fbText + '</p>';
-  html += '</div></div>';
+  html += '</div>'; // end 2col
 
-  html += '</div>'; // end right column
-  html += '</div>'; // end grid
+  // 4. WORDS PRACTICED
+  if (sessionWordsPracticed.length > 0) {
+    html += '<div class="summary-section"><div class="summary-section-title">WORDS PRACTICED</div>';
+    html += '<div class="summary-chips">' + sessionWordsPracticed.map(w => '<span class="summary-chip-green">' + w + ' \u2713</span>').join('') + '</div></div>';
+  }
+
+  // 5. WORDS WITH ERRORS
+  if (sessionWordsWithErrors.length > 0) {
+    html += '<div class="summary-section"><div class="summary-section-title">WORDS WITH ERRORS</div>';
+    html += '<div class="summary-chips">' + sessionWordsWithErrors.map(w => '<span class="summary-chip-red">' + w + '</span>').join('') + '</div></div>';
+  }
+
+  // 6. TEXTS COMPLETED (side by side on desktop)
+  html += '<div class="summary-section"><div class="summary-section-title">TEXTS COMPLETED</div>';
+  html += '<div class="summary-texts-grid">';
+  sessionTexts.forEach((t, idx) => {
+    const wordResultsHtml = t.wordResults
+      ? t.wordResults.map(wr => '<span class="word-span ' + wr.cls + '">' + wr.word + '</span>').join(' ')
+      : t.text.split(/\s+/).slice(0, 20).join(' ') + (t.text.split(/\s+/).length > 20 ? '...' : '');
+    html += '<div class="summary-text-card">';
+    html += '<h4>Text ' + (idx + 1) + ' \u2014 ' + GRADE_LABELS[t.level] + '</h4>';
+    html += '<div class="passage-text">' + wordResultsHtml + '</div>';
+    html += '<div class="summary-text-meta"><span>Attempts</span> <strong>' + t.attempts + '</strong></div>';
+    html += '<div class="summary-text-meta"><span>Best score</span> <strong>' + t.bestScore + '%</strong></div>';
+    html += '</div>';
+  });
+  html += '</div></div>';
 
   document.getElementById('summaryContent').innerHTML = html;
   showScreen('screenSummary');
