@@ -508,6 +508,25 @@
     font-size: 12px; color: var(--slate-500); margin-top: 4px;
   }
 
+  /* Practice feedback */
+  .practice-feedback {
+    padding: 12px 24px; border-radius: 12px;
+    font-size: 16px; font-weight: 600; text-align: center;
+    animation: feedback-pop 0.3s ease-out;
+  }
+  @keyframes feedback-pop {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .feedback-correct {
+    background: var(--emerald-50); color: var(--emerald-600);
+    border: 2px solid var(--emerald-400);
+  }
+  .feedback-tryagain {
+    background: var(--red-100); color: var(--red-500);
+    border: 2px solid var(--red-400);
+  }
+
   .hidden { display: none !important; }
 
   /* ===== DESKTOP LAYOUT ===== */
@@ -679,6 +698,7 @@
         </button>
         <div class="word-practice-text" id="practiceWordText"></div>
       </div>
+      <div class="practice-feedback hidden" id="practiceFeedback"></div>
       <div class="voice-visualizer" id="practiceVisualizer"></div>
       <div class="voice-hint" id="practiceVoiceHint"></div>
     </div>
@@ -919,9 +939,10 @@ async function startReading() {
   // Azure SDK manages its own mic — use fromDefaultMicrophoneInput for reliable recognition
   const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
   speechConfig.speechRecognitionLanguage = 'en-US';
-  speechConfig.setProperty(SpeechSDK.PropertyId.Speech_SegmentationSilenceTimeoutMs, "1500");
-  speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "2000");
+  speechConfig.setProperty(SpeechSDK.PropertyId.Speech_SegmentationSilenceTimeoutMs, "2000");
+  speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "3000");
   speechConfig.setProperty("SpeechServiceConnection_ChildSpeech", "true");
+  speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "10000");
 
   const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
   const pronConfig = new SpeechSDK.PronunciationAssessmentConfig(
@@ -1186,6 +1207,8 @@ function showPracticeWord() {
     'Word ' + (currentPracticeIdx + 1) + ' of ' + practiceWords.length;
   document.getElementById('practiceWordText').textContent = practiceWords[currentPracticeIdx];
 
+  practiceAttempts = 0;
+  document.getElementById('practiceFeedback').classList.add('hidden');
   document.getElementById('btnPrevWord').disabled = currentPracticeIdx === 0;
   document.getElementById('btnNextWord').disabled = currentPracticeIdx >= practiceWords.length - 1;
 
@@ -1207,12 +1230,16 @@ function speakWord() {
   }
 }
 
+let practiceAttempts = 0;
+const MAX_PRACTICE_ATTEMPTS = 3;
+
 async function startWordPractice() {
   document.getElementById('btnPracticeMic').className = 'mic-btn mic-btn-stop';
   document.getElementById('btnPracticeMic').innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 6L6 18M6 6l12 12" stroke="white" stroke-width="3" stroke-linecap="round" fill="none"/></svg>';
   document.getElementById('btnPracticeMic').onclick = stopWordPractice;
   document.getElementById('practiceLabel2').textContent = 'Stop';
   document.getElementById('practiceLabel2').className = 'action-label action-label-red';
+  document.getElementById('practiceFeedback').classList.add('hidden');
 
   const word = practiceWords[currentPracticeIdx];
   const stream = await navigator.mediaDevices.getUserMedia({
@@ -1222,8 +1249,9 @@ async function startWordPractice() {
 
   const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
   speechConfig.speechRecognitionLanguage = 'en-US';
-  speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "2000");
+  speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "3000");
   speechConfig.setProperty("SpeechServiceConnection_ChildSpeech", "true");
+  speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "8000");
 
   const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
   const pronConfig = new SpeechSDK.PronunciationAssessmentConfig(
@@ -1236,31 +1264,115 @@ async function startWordPractice() {
   recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
   pronConfig.applyTo(recognizer);
 
-  // Start visualizer after Azure is set up
   initLiveVisualizer('practiceVisualizer', 'practiceVoiceHint');
 
   recognizer.recognized = function (s, e) {
     if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
-      recognizer.stopContinuousRecognitionAsync(() => {}, () => {});
+      let score = 0;
+      try {
+        const json = JSON.parse(e.result.properties.getProperty(
+          SpeechSDK.PropertyId.SpeechServiceResponse_JsonResult
+        ));
+        const nBest = json.NBest && json.NBest[0];
+        if (nBest && nBest.PronunciationAssessment) {
+          score = Math.round(nBest.PronunciationAssessment.AccuracyScore || 0);
+        }
+      } catch (err) {}
+
+      recognizer.stopContinuousRecognitionAsync(() => {
+        recognizer.close(); recognizer = null; releaseStream();
+        handlePracticeResult(score);
+      }, () => {
+        recognizer.close(); recognizer = null; releaseStream();
+        handlePracticeResult(score);
+      });
     }
   };
 
   recognizer.sessionStopped = function () {
-    recognizer.close(); recognizer = null; releaseStream(); advancePractice();
+    if (recognizer) { recognizer.close(); recognizer = null; }
+    releaseStream();
+    // No speech detected — treat as failed attempt
+    handlePracticeResult(0);
   };
 
   recognizer.canceled = function () {
-    recognizer.close(); recognizer = null; releaseStream(); advancePractice();
+    if (recognizer) { recognizer.close(); recognizer = null; }
+    releaseStream();
+    handlePracticeResult(0);
   };
 
   recognizer.startContinuousRecognitionAsync(() => {}, (err) => console.error(err));
 }
 
+function handlePracticeResult(score) {
+  const feedback = document.getElementById('practiceFeedback');
+  const word = practiceWords[currentPracticeIdx];
+  const PASS_THRESHOLD = 50;
+
+  if (score >= PASS_THRESHOLD) {
+    // Correct!
+    feedback.className = 'practice-feedback feedback-correct';
+    feedback.textContent = 'Great! Score: ' + score + '%';
+    feedback.classList.remove('hidden');
+
+    // Auto-advance after showing feedback
+    setTimeout(() => {
+      practiceAttempts = 0;
+      advancePractice();
+    }, 1200);
+  } else {
+    // Incorrect — increment attempts
+    practiceAttempts++;
+    const remaining = MAX_PRACTICE_ATTEMPTS - practiceAttempts;
+
+    feedback.className = 'practice-feedback feedback-tryagain';
+    if (score > 0) {
+      feedback.textContent = 'Try again! Score: ' + score + '% (' + remaining + ' left)';
+    } else {
+      feedback.textContent = 'I didn\'t hear you. Try again! (' + remaining + ' left)';
+    }
+    feedback.classList.remove('hidden');
+
+    // Auto-play correct pronunciation so kid can hear it
+    speakWordSlow(word);
+
+    if (practiceAttempts >= MAX_PRACTICE_ATTEMPTS) {
+      // Max attempts — play correct pronunciation and move on
+      feedback.textContent = 'Let\'s hear it: "' + word + '"';
+      setTimeout(() => {
+        practiceAttempts = 0;
+        advancePractice();
+      }, 2500);
+    } else {
+      // Reset mic button for retry after a pause
+      setTimeout(() => {
+        document.getElementById('btnPracticeMic').className = 'mic-btn mic-btn-record';
+        document.getElementById('btnPracticeMic').innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
+        document.getElementById('btnPracticeMic').onclick = startWordPractice;
+        document.getElementById('practiceLabel2').textContent = 'Tap to try again';
+        document.getElementById('practiceLabel2').className = 'action-label';
+        initStaticVisualizer('practiceVisualizer');
+        document.getElementById('practiceVoiceHint').textContent = '';
+      }, 2000);
+    }
+  }
+}
+
+function speakWordSlow(word) {
+  if ('speechSynthesis' in window) {
+    const utt = new SpeechSynthesisUtterance(word);
+    utt.rate = 0.6;
+    utt.lang = 'en-US';
+    speechSynthesis.speak(utt);
+  }
+}
+
 function stopWordPractice() {
   if (recognizer) {
     recognizer.stopContinuousRecognitionAsync(
-      () => { recognizer.close(); recognizer = null; releaseStream(); advancePractice(); },
-      () => { recognizer.close(); recognizer = null; releaseStream(); advancePractice(); }
+      () => { recognizer.close(); recognizer = null; releaseStream(); handlePracticeResult(0); },
+      () => { recognizer.close(); recognizer = null; releaseStream(); handlePracticeResult(0); }
     );
   }
 }
