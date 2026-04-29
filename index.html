@@ -910,19 +910,20 @@ async function startReading() {
 
   renderPassageHighlight(0);
 
+  // Get mic stream for visualizer
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
   });
   window._stream = stream;
-  initLiveVisualizer('voiceVisualizer', 'voiceHint');
 
+  // Azure SDK manages its own mic — use fromDefaultMicrophoneInput for reliable recognition
   const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
   speechConfig.speechRecognitionLanguage = 'en-US';
   speechConfig.setProperty(SpeechSDK.PropertyId.Speech_SegmentationSilenceTimeoutMs, "1500");
   speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "2000");
   speechConfig.setProperty("SpeechServiceConnection_ChildSpeech", "true");
 
-  const audioConfig = SpeechSDK.AudioConfig.fromStreamInput(stream);
+  const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
   const pronConfig = new SpeechSDK.PronunciationAssessmentConfig(
     currentText,
     SpeechSDK.PronunciationAssessmentGradingSystem.HundredMark,
@@ -934,8 +935,33 @@ async function startReading() {
   recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
   pronConfig.applyTo(recognizer);
 
+  // Start visualizer AFTER Azure is set up
+  initLiveVisualizer('voiceVisualizer', 'voiceHint');
+
   const sentenceWordCounts = sentences.map(s => s.split(/\s+/).length);
 
+  function updateWordProgress(text) {
+    const totalHeard = text.split(/\s+/).filter(Boolean).length;
+    const totalWords = currentText.split(/\s+/).length;
+    let wordsAcc = 0, activeSentence = 0;
+    for (let i = 0; i < sentenceWordCounts.length; i++) {
+      wordsAcc += sentenceWordCounts[i];
+      if (totalHeard < wordsAcc) { activeSentence = i; break; }
+      activeSentence = i + 1;
+    }
+    renderPassageHighlight(Math.min(activeSentence, sentences.length));
+    document.getElementById('wordCounter').textContent = totalHeard + ' / ' + totalWords + ' words';
+  }
+
+  // Real-time interim results — updates word counter and highlights as you speak
+  recognizer.recognizing = function (s, e) {
+    if (e.result.text) {
+      const interimFull = allRecognizedText + (allRecognizedText ? ' ' : '') + e.result.text;
+      updateWordProgress(interimFull);
+    }
+  };
+
+  // Final results — accumulates scores and confirmed text
   recognizer.recognized = function (s, e) {
     if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
       allRecognizedText += (allRecognizedText ? ' ' : '') + e.result.text;
@@ -955,28 +981,20 @@ async function startReading() {
           finalPronScores.overall += (pa.PronScore || 0) * w;
           pronScoreWeights += w;
         }
-      } catch (err) {}
+      } catch (err) { console.error('Parse error:', err); }
 
-      const totalHeard = allRecognizedText.split(/\s+/).filter(Boolean).length;
-      const totalWords = currentText.split(/\s+/).length;
-      let wordsAcc = 0, activeSentence = 0;
-      for (let i = 0; i < sentenceWordCounts.length; i++) {
-        wordsAcc += sentenceWordCounts[i];
-        if (totalHeard < wordsAcc) { activeSentence = i; break; }
-        activeSentence = i + 1;
-      }
-      renderPassageHighlight(Math.min(activeSentence, sentences.length));
-      document.getElementById('wordCounter').textContent = totalHeard + ' / ' + totalWords + ' words';
+      updateWordProgress(allRecognizedText);
     }
   };
 
   recognizer.canceled = function (s, e) {
-    if (e.reason === SpeechSDK.CancellationReason.Error) {
-      console.error('Speech error:', e.errorDetails);
-    }
+    console.error('Speech canceled:', e.reason, e.errorDetails);
   };
 
-  recognizer.startContinuousRecognitionAsync(() => {}, (err) => console.error(err));
+  recognizer.startContinuousRecognitionAsync(
+    () => { console.log('Recognition started'); },
+    (err) => { console.error('Recognition start error:', err); }
+  );
 }
 
 function renderPassageHighlight(activeSentenceIdx) {
@@ -1201,14 +1219,13 @@ async function startWordPractice() {
     audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
   });
   window._stream = stream;
-  initLiveVisualizer('practiceVisualizer', 'practiceVoiceHint');
 
   const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
   speechConfig.speechRecognitionLanguage = 'en-US';
   speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "2000");
   speechConfig.setProperty("SpeechServiceConnection_ChildSpeech", "true");
 
-  const audioConfig = SpeechSDK.AudioConfig.fromStreamInput(stream);
+  const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
   const pronConfig = new SpeechSDK.PronunciationAssessmentConfig(
     word,
     SpeechSDK.PronunciationAssessmentGradingSystem.HundredMark,
@@ -1218,6 +1235,9 @@ async function startWordPractice() {
 
   recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
   pronConfig.applyTo(recognizer);
+
+  // Start visualizer after Azure is set up
+  initLiveVisualizer('practiceVisualizer', 'practiceVoiceHint');
 
   recognizer.recognized = function (s, e) {
     if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
