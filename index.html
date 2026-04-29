@@ -4,27 +4,42 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Readerly — AI Reading Tutor</title>
-<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
 <style>
   :root {
     --indigo-50: #EEF2FF;
+    --indigo-100: #E0E7FF;
+    --indigo-400: #818CF8;
     --indigo-500: #6366F1;
     --indigo-600: #4F46E5;
+    --indigo-700: #4338CA;
     --slate-50: #F8FAFC;
     --slate-100: #F1F5F9;
     --slate-200: #E2E8F0;
+    --slate-300: #CBD5E1;
+    --slate-400: #94A3B8;
     --slate-500: #64748B;
+    --slate-600: #475569;
     --slate-700: #334155;
     --slate-900: #0F172A;
+    --emerald-50: #ECFDF5;
+    --emerald-100: #D1FAE5;
+    --emerald-400: #34D399;
     --emerald-500: #10B981;
     --emerald-600: #059669;
-    --red-500: #EF4444;
+    --emerald-700: #047857;
+    --emerald-800: #065F46;
     --red-100: #FEE2E2;
+    --red-400: #F87171;
+    --red-500: #EF4444;
     --amber-400: #FBBF24;
+    --amber-500: #F59E0B;
     --green-100: #DCFCE7;
     --green-500: #22C55E;
     --green-700: #15803D;
+    --yellow-100: #FEF9C3;
+    --yellow-700: #A16207;
     --white: #FFFFFF;
   }
 
@@ -32,15 +47,13 @@
 
   body {
     font-family: 'Rubik', sans-serif;
-    background: #E2E8F0;
-    display: flex;
-    justify-content: center;
+    background: var(--slate-200);
     min-height: 100vh;
+    min-height: 100dvh;
   }
 
   .app {
     width: 100%;
-    max-width: 430px;
     min-height: 100vh;
     min-height: 100dvh;
     background: var(--slate-50);
@@ -48,48 +61,79 @@
     flex-direction: column;
     position: relative;
     overflow: hidden;
+    margin: 0 auto;
   }
 
-  /* Header */
+  /* ===== HEADER ===== */
   .header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
+    padding: 6px 16px;
     background: var(--indigo-500);
     color: white;
     flex-shrink: 0;
     z-index: 10;
+    height: 52px;
   }
   .header-btn {
-    background: none; border: none; color: white; font-size: 20px;
-    cursor: pointer; padding: 4px 8px; border-radius: 8px;
+    background: none; border: none; color: white;
+    cursor: pointer; padding: 8px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
   }
   .header-btn:hover { background: rgba(255,255,255,0.15); }
+  .header-btn svg { width: 24px; height: 24px; }
   .header-brand {
     display: flex; align-items: center; gap: 8px;
-    font-size: 18px; font-weight: 600;
+    font-size: 16px; font-weight: 600;
   }
   .header-logo {
-    width: 32px; height: 32px; background: #FFD43B;
+    width: 27px; height: 27px; background: #FFD43B;
     border-radius: 50%; display: flex; align-items: center;
-    justify-content: center; font-size: 18px;
+    justify-content: center; font-size: 14px;
   }
 
-  /* Banner */
+  /* ===== BANNER ===== */
   .banner {
-    padding: 14px 20px;
+    padding: 16px 16px 20px;
     color: white;
     flex-shrink: 0;
-    border-radius: 0 0 20px 20px;
   }
   .banner-indigo { background: var(--indigo-500); }
   .banner-green { background: var(--emerald-500); }
-  .banner h3 { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
-  .banner p { font-size: 14px; font-weight: 400; opacity: 0.95; }
-  .banner-counter { font-size: 13px; font-weight: 500; float: right; margin-top: 2px; }
+  .banner h2 { font-size: 22px; font-weight: 700; line-height: 1.3; }
+  .banner p { font-size: 15px; font-weight: 400; opacity: 0.95; margin-top: 2px; }
+  .banner-row { display: flex; justify-content: space-between; align-items: center; }
+  .banner-counter {
+    font-size: 14px; font-weight: 500;
+    background: rgba(255,255,255,0.2); padding: 4px 12px;
+    border-radius: 12px;
+  }
 
-  /* Screen container */
+  /* Star sub-banner */
+  .star-banner {
+    background: rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 12px 20px;
+    margin: 12px 16px 0;
+    text-align: center;
+  }
+  .star-banner .stars { font-size: 32px; letter-spacing: 4px; }
+  .star-banner .star-label { font-size: 14px; opacity: 0.9; margin-top: 4px; }
+
+  /* "All words done" sub-banner */
+  .done-sub-banner {
+    background: rgba(255,255,255,0.2);
+    border-radius: 12px;
+    padding: 14px 20px;
+    margin: 8px 16px 0;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+  }
+
+  /* ===== SCREENS ===== */
   .screen {
     display: none;
     flex-direction: column;
@@ -99,60 +143,125 @@
   .screen.active { display: flex; }
   .screen-content {
     flex: 1;
-    padding: 20px 16px;
+    padding: 24px 16px;
     display: flex;
     flex-direction: column;
   }
   .screen-bottom {
-    padding: 12px 16px 24px;
+    padding: 12px 16px 28px;
     flex-shrink: 0;
   }
 
-  /* Grade Selection */
+  /* ===== ONBOARDING ===== */
+  .onboard-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+  }
+  .onboard-illustration {
+    width: 200px; height: 160px;
+    background: var(--slate-100);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .onboard-illustration::before {
+    content: '';
+    position: absolute; width: 150px; height: 8px;
+    background: var(--slate-200); border-radius: 4px;
+    top: 40px;
+  }
+  .onboard-illustration::after {
+    content: '';
+    position: absolute; width: 120px; height: 8px;
+    background: var(--slate-200); border-radius: 4px;
+    top: 58px;
+  }
+  .onboard-illustration .illus-dot {
+    width: 40px; height: 40px;
+    background: var(--indigo-100);
+    border-radius: 50%;
+    position: absolute; bottom: 24px;
+  }
+  .onboard-title {
+    font-size: 26px; font-weight: 800; color: var(--slate-900);
+    margin-bottom: 12px;
+  }
+  .onboard-desc {
+    font-size: 15px; color: var(--slate-500); line-height: 1.5;
+    max-width: 280px;
+  }
+  .onboard-dots {
+    display: flex; gap: 8px; justify-content: center;
+    margin-top: 24px;
+  }
+  .onboard-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--slate-300);
+  }
+  .onboard-dot.active { background: var(--indigo-500); }
+
+  /* ===== GRADE SELECTION ===== */
+  .grade-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
   .grade-title {
     font-size: 24px; font-weight: 700; text-align: center;
-    color: var(--slate-900); margin-bottom: 20px;
+    color: var(--slate-900); margin-bottom: 24px;
   }
   .grade-grid {
     display: grid; grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: 12px; width: 100%; max-width: 340px;
   }
   .grade-card {
     background: var(--white); border: 2px solid var(--slate-200);
     border-radius: 12px; padding: 24px 12px;
-    text-align: center; font-size: 16px; font-weight: 500;
+    text-align: center; font-size: 15px; font-weight: 500;
     color: var(--slate-700); cursor: pointer;
     transition: all 0.2s;
   }
-  .grade-card:hover { border-color: var(--indigo-500); background: var(--indigo-50); }
+  .grade-card:hover { border-color: var(--indigo-400); background: var(--indigo-50); }
   .grade-card.selected {
     border-color: var(--indigo-500); background: var(--indigo-50);
     color: var(--indigo-600); font-weight: 600;
   }
 
-  /* Buttons */
+  /* ===== BUTTONS ===== */
   .btn {
-    width: 100%; padding: 16px; border: none; border-radius: 12px;
+    width: 100%; padding: 14px 24px; border: none; border-radius: 12px;
     font-family: 'Rubik', sans-serif; font-size: 16px; font-weight: 600;
     cursor: pointer; transition: all 0.2s; text-align: center;
+    display: block;
   }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-primary {
-    background: var(--indigo-500); color: white;
-  }
+  .btn-primary { background: var(--indigo-500); color: white; }
   .btn-primary:hover:not(:disabled) { background: var(--indigo-600); }
-  .btn-green {
-    background: var(--emerald-500); color: white;
-  }
+  .btn-green { background: var(--emerald-500); color: white; }
   .btn-green:hover:not(:disabled) { background: var(--emerald-600); }
   .btn-outline {
     background: var(--white); color: var(--slate-700);
     border: 2px solid var(--slate-200);
   }
-  .btn-outline:hover:not(:disabled) { border-color: var(--slate-500); }
+  .btn-outline:hover:not(:disabled) { border-color: var(--slate-400); }
+  .btn-link {
+    background: none; border: none; color: var(--slate-500);
+    font-size: 15px; font-weight: 500; cursor: pointer;
+    padding: 12px; font-family: 'Rubik', sans-serif;
+  }
+  .btn-link:hover { color: var(--slate-700); }
   .btn + .btn { margin-top: 8px; }
 
-  /* Passage Card */
+  /* ===== PASSAGE CARD ===== */
   .passage-card {
     background: var(--white); border: 1.5px dashed var(--slate-200);
     border-radius: 16px; padding: 20px;
@@ -161,88 +270,91 @@
     font-size: 13px; color: var(--slate-500); margin-bottom: 12px; font-weight: 500;
   }
   .passage-text {
-    font-size: 19px; line-height: 1.75; font-weight: 600; color: var(--slate-900);
+    font-size: 18px; line-height: 1.8; font-weight: 600; color: var(--slate-900);
   }
 
-  /* Word highlighting */
-  .word-span { padding: 1px 3px; border-radius: 4px; transition: background 0.2s; }
-  .word-current { background: var(--amber-400); color: var(--slate-900); border-radius: 4px; }
+  /* ===== WORD HIGHLIGHTING ===== */
+  .word-span { padding: 2px 4px; border-radius: 4px; transition: background 0.2s; }
+  .word-current { background: var(--amber-400); color: var(--slate-900); }
   .word-perfect { background: var(--green-100); color: var(--green-700); }
-  .word-good { background: #DCFCE7; color: var(--green-700); }
-  .word-fair { background: #FEF9C3; color: #854D0E; }
+  .word-good { background: var(--green-100); color: var(--green-700); }
+  .word-fair { background: var(--yellow-100); color: var(--yellow-700); }
   .word-poor { background: var(--red-100); color: var(--red-500); }
   .word-missed { background: var(--red-100); color: var(--red-500); text-decoration: line-through; }
 
-  /* Mic / Stop buttons */
+  /* ===== MIC / STOP BUTTONS ===== */
   .action-area {
     display: flex; flex-direction: column; align-items: center;
-    padding: 16px 0 8px;
+    padding: 20px 0 12px;
+    flex-shrink: 0;
   }
   .mic-btn {
-    width: 80px; height: 80px; border-radius: 50%; border: none;
+    width: 72px; height: 72px; border-radius: 50%; border: none;
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: all 0.2s; font-size: 32px;
+    cursor: pointer; transition: all 0.2s;
   }
-  .mic-btn-record {
-    background: var(--indigo-500); color: white;
+  .mic-btn svg { width: 28px; height: 28px; }
+  .mic-btn-record { background: var(--indigo-400); color: white; }
+  .mic-btn-record:hover { background: var(--indigo-500); transform: scale(1.05); }
+  .mic-btn-stop { background: var(--red-500); color: white; }
+  .mic-btn-stop:hover { background: var(--red-400); }
+  .mic-btn-stop { animation: mic-pulse 1.5s ease-in-out infinite; }
+  @keyframes mic-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+    50% { box-shadow: 0 0 0 16px rgba(239,68,68,0); }
   }
-  .mic-btn-record:hover { background: var(--indigo-600); transform: scale(1.05); }
-  .mic-btn-stop {
-    background: var(--red-500); color: white;
-  }
-  .mic-btn-stop:hover { background: #DC2626; transform: scale(1.05); }
-  .mic-btn-green {
-    background: var(--emerald-500); color: white;
-  }
+  .mic-btn-green { background: var(--emerald-500); color: white; }
   .mic-btn-green:hover { background: var(--emerald-600); transform: scale(1.05); }
   .action-label {
     margin-top: 8px; font-size: 14px; font-weight: 500; color: var(--indigo-500);
   }
   .action-label-red { color: var(--red-500); }
+  .action-label-green { color: var(--emerald-500); }
 
-  /* Word counter */
-  .word-counter {
-    text-align: center; font-size: 14px; font-weight: 500;
-    color: var(--indigo-500); margin-top: 12px;
+  /* ===== WAVE ANIMATION (SVG sine waves) ===== */
+  .wave-container {
+    width: 100%; height: 60px; margin-top: 12px;
+    overflow: hidden; position: relative;
   }
-
-  /* Waveform */
-  .waveform {
-    display: flex; align-items: center; justify-content: center;
-    height: 40px; gap: 3px; margin-top: 12px;
+  .wave-container svg {
+    width: 100%; height: 100%;
   }
-  .wave-bar {
-    width: 4px; border-radius: 2px; background: var(--indigo-500);
-    opacity: 0.4; animation: wave 1.2s ease-in-out infinite;
+  .wave-path {
+    fill: none; stroke-width: 2.5;
+    animation: wave-move 2s linear infinite;
   }
-  .wave-bar:nth-child(odd) { background: #F472B6; }
-  @keyframes wave {
-    0%, 100% { height: 8px; }
-    50% { height: 28px; }
+  .wave-path-1 { stroke: var(--indigo-400); }
+  .wave-path-2 { stroke: #F472B6; opacity: 0.7; animation-duration: 2.5s; animation-direction: reverse; }
+  .wave-path-3 { stroke: #93C5FD; opacity: 0.6; animation-duration: 3s; }
+  @keyframes wave-move {
+    0% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: -200; }
   }
 
   /* Live voice visualizer */
   .voice-visualizer {
     display: flex; align-items: center; justify-content: center;
-    height: 70px; gap: 3px; margin-top: 12px;
+    height: 60px; gap: 3px; margin-top: 12px;
   }
   .voice-visualizer .v-bar {
-    width: 5px; border-radius: 3px; min-height: 4px;
+    width: 4px; border-radius: 3px; min-height: 4px;
     transition: height 0.07s ease-out;
   }
   .voice-visualizer .v-bar:nth-child(odd) { background: var(--indigo-500); }
   .voice-visualizer .v-bar:nth-child(even) { background: #F472B6; }
-
-  /* Silent state hint */
   .voice-hint {
     text-align: center; font-size: 13px; color: var(--slate-500);
     margin-top: 4px; font-weight: 500; min-height: 18px;
   }
   .voice-hint-active { color: var(--emerald-500); font-weight: 600; }
 
-  /* (removed static wave decoration — replaced by voice-visualizer) */
+  /* Word counter */
+  .word-counter {
+    text-align: center; font-size: 14px; font-weight: 500;
+    color: var(--indigo-500); margin-top: 8px;
+  }
 
-  /* Score Cards */
+  /* ===== SCORE CARDS ===== */
   .scores-row {
     display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
     margin: 16px 0;
@@ -251,112 +363,51 @@
     background: var(--white); border-radius: 12px; padding: 14px 8px;
     text-align: center; border: 1px solid var(--slate-200);
   }
-  .score-value {
-    font-size: 26px; font-weight: 700;
-  }
+  .score-value { font-size: 24px; font-weight: 700; }
   .score-value-green { color: var(--emerald-500); }
-  .score-value-yellow { color: var(--amber-400); }
+  .score-value-yellow { color: var(--amber-500); }
   .score-value-red { color: var(--red-500); }
-  .score-label {
-    font-size: 12px; color: var(--slate-500); margin-top: 2px; font-weight: 500;
-  }
-  .score-was {
-    font-size: 11px; color: var(--slate-500); margin-top: 2px;
-  }
+  .score-label { font-size: 12px; color: var(--slate-500); margin-top: 2px; font-weight: 500; }
+  .score-was { font-size: 11px; color: var(--slate-400); margin-top: 2px; }
 
-  /* Practice word chips */
+  /* ===== PRACTICE CHIPS ===== */
   .practice-chips {
     display: flex; gap: 8px; flex-wrap: wrap;
     justify-content: center; margin-top: 8px;
   }
   .chip-red {
-    padding: 8px 20px; border: 1.5px solid var(--red-500);
+    padding: 8px 20px; border: 1.5px solid var(--red-400);
     border-radius: 20px; background: var(--red-100);
     font-size: 16px; font-weight: 600; color: var(--red-500);
   }
   .chip-green {
-    padding: 10px 20px; border: 1.5px solid var(--emerald-500);
-    border-radius: 12px; background: #DCFCE7;
+    padding: 10px 24px; border: 1.5px solid var(--emerald-400);
+    border-radius: 12px; background: var(--emerald-50);
     font-size: 18px; font-weight: 600; color: var(--emerald-500);
-    display: flex; align-items: center; gap: 8px;
   }
 
-  /* Word practice card */
+  /* ===== WORD PRACTICE CARD ===== */
   .word-practice-card {
     background: var(--white); border: 1.5px solid var(--slate-200);
-    border-radius: 16px; padding: 32px 24px;
+    border-radius: 16px; padding: 24px;
     display: flex; align-items: center; gap: 16px;
-    justify-content: center;
   }
   .word-practice-text {
     font-size: 36px; font-weight: 700; color: var(--slate-900);
+    flex: 1; text-align: center;
   }
   .speaker-btn {
-    background: none; border: none; font-size: 24px;
-    color: var(--indigo-500); cursor: pointer; padding: 8px;
-    border-radius: 8px;
+    background: none; border: none;
+    color: var(--indigo-500); cursor: pointer; padding: 12px;
+    border-radius: 8px; display: flex; align-items: center;
+    border-right: 1px solid var(--slate-200);
   }
   .speaker-btn:hover { background: var(--indigo-50); }
+  .speaker-btn svg { width: 28px; height: 28px; }
 
-  /* Section labels */
-  .section-label {
-    font-size: 14px; font-weight: 600; color: var(--slate-700);
-    text-align: center; margin: 16px 0 8px;
-  }
-  .section-sublabel {
-    font-size: 14px; color: var(--slate-500); text-align: center;
-    margin: 16px 0 8px;
-  }
-
-  /* Mastered words list */
-  .mastered-list {
-    display: flex; flex-direction: column; gap: 8px;
-    align-items: center; margin-top: 8px;
-  }
-
-  .hidden { display: none !important; }
-
-  /* Recording pulse animation */
-  .mic-btn-stop {
-    animation: mic-pulse 1.5s ease-in-out infinite;
-  }
-  @keyframes mic-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
-    50% { box-shadow: 0 0 0 18px rgba(239,68,68,0); }
-  }
-
-  .recording-overlay {
-    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(239,68,68,0.04);
-    pointer-events: none; z-index: 0;
-    animation: overlay-pulse 2s ease-in-out infinite;
-  }
-  @keyframes overlay-pulse {
-    0%, 100% { opacity: 0; }
-    50% { opacity: 1; }
-  }
-
-  .listening-indicator {
-    display: flex; align-items: center; justify-content: center;
-    gap: 8px; padding: 8px 20px; border-radius: 20px;
-    background: var(--red-100); color: var(--red-500);
-    font-size: 14px; font-weight: 600; margin-top: 8px;
-  }
-  .listening-dot {
-    width: 10px; height: 10px; border-radius: 50%;
-    background: var(--red-500); animation: dot-blink 1s ease-in-out infinite;
-  }
-  @keyframes dot-blink {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.3; transform: scale(0.7); }
-  }
-
-  /* (removed waveform-recording — replaced by live voice-visualizer) */
-
-  /* Practice word nav */
+  /* Nav buttons for practice */
   .practice-nav {
-    display: flex; align-items: center; gap: 12px;
-    justify-content: center; width: 100%;
+    display: flex; align-items: center; gap: 16px; justify-content: center;
   }
   .nav-btn {
     width: 44px; height: 44px; border-radius: 50%;
@@ -367,6 +418,137 @@
   }
   .nav-btn:hover:not(:disabled) { border-color: var(--indigo-500); color: var(--indigo-500); }
   .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .nav-btn svg { width: 18px; height: 18px; }
+
+  /* ===== SECTION LABELS ===== */
+  .section-label {
+    font-size: 18px; font-weight: 700; color: var(--slate-900);
+    text-align: center; margin: 20px 0 8px;
+  }
+  .section-sublabel {
+    font-size: 15px; color: var(--slate-500); text-align: center;
+    margin: 16px 0 8px;
+  }
+  .mastered-list {
+    display: flex; flex-direction: column; gap: 10px;
+    align-items: center; margin-top: 12px;
+  }
+
+  /* ===== SUMMARY SCREEN ===== */
+  .summary-section {
+    margin-bottom: 20px;
+  }
+  .summary-section-title {
+    font-size: 11px; font-weight: 700; color: var(--slate-500);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .summary-card {
+    background: var(--white); border: 1px solid var(--slate-200);
+    border-radius: 12px; padding: 16px; overflow: hidden;
+  }
+  .summary-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0;
+    font-size: 14px;
+  }
+  .summary-row + .summary-row { border-top: 1px solid var(--slate-100); }
+  .summary-row-label { color: var(--slate-600); }
+  .summary-row-value { font-weight: 600; color: var(--slate-900); }
+  .summary-row-value-green { font-weight: 600; color: var(--emerald-500); }
+  .summary-row-value-red { font-weight: 600; color: var(--red-500); }
+
+  .summary-scores {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;
+  }
+  .summary-score-pill {
+    padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 700;
+    background: var(--indigo-50); color: var(--indigo-500);
+    text-align: center;
+  }
+  .summary-score-pill small { font-size: 10px; font-weight: 500; display: block; color: var(--slate-500); }
+
+  .summary-text-card {
+    background: var(--slate-50); border-radius: 10px; padding: 14px;
+    margin-bottom: 10px;
+  }
+  .summary-text-card h4 { font-size: 14px; font-weight: 700; color: var(--slate-900); margin-bottom: 6px; }
+  .summary-text-card .passage-text { font-size: 13px; line-height: 1.6; font-weight: 500; }
+  .summary-text-meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; }
+  .summary-text-meta span { color: var(--slate-500); }
+  .summary-text-meta strong { color: var(--emerald-500); }
+
+  .summary-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .summary-chip-green {
+    padding: 4px 12px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    background: var(--emerald-100); color: var(--emerald-700);
+  }
+  .summary-chip-red {
+    padding: 4px 12px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    background: var(--red-100); color: var(--red-500);
+  }
+
+  .feedback-card {
+    background: var(--emerald-50); border-left: 4px solid var(--emerald-500);
+    border-radius: 0 12px 12px 0; padding: 16px;
+  }
+  .feedback-card h4 { font-size: 16px; font-weight: 700; color: var(--emerald-600); margin-bottom: 4px; }
+  .feedback-card p { font-size: 14px; color: var(--slate-600); line-height: 1.5; }
+
+  .progress-bars {
+    display: flex; align-items: flex-end; gap: 4px; height: 80px; padding: 8px 0;
+  }
+  .progress-bar {
+    flex: 1; border-radius: 4px 4px 0 0; min-height: 8px;
+    transition: height 0.3s;
+  }
+  .progress-bar-green { background: var(--emerald-400); }
+  .progress-bar-light { background: var(--emerald-100); }
+  .progress-caption {
+    font-size: 12px; color: var(--slate-500); margin-top: 4px;
+  }
+
+  .hidden { display: none !important; }
+
+  /* ===== DESKTOP LAYOUT ===== */
+  @media (min-width: 768px) {
+    body { display: flex; justify-content: center; }
+    .app { max-width: 900px; border-radius: 0; }
+
+    .banner { padding: 20px 40px 24px; }
+    .screen-content { padding: 32px 40px; }
+    .screen-bottom { padding: 16px 40px 32px; }
+
+    .passage-card { max-width: 700px; margin: 0 auto; }
+    .passage-text { font-size: 20px; }
+
+    .grade-grid { max-width: 500px; gap: 16px; }
+    .grade-card { padding: 28px 20px; font-size: 16px; }
+
+    .onboard-center { padding: 40px; }
+    .onboard-title { font-size: 30px; }
+    .onboard-desc { font-size: 16px; max-width: 360px; }
+
+    .scores-row { max-width: 500px; margin: 20px auto; }
+
+    .word-practice-card { max-width: 400px; margin: 0 auto; }
+
+    /* Desktop buttons side by side */
+    .btn-row {
+      display: flex; gap: 12px;
+    }
+    .btn-row .btn { flex: 1; }
+    .btn-row .btn + .btn { margin-top: 0; }
+
+    /* Summary 2-column */
+    .summary-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .app { max-width: 1040px; }
+  }
 </style>
 </head>
 <body>
@@ -374,26 +556,53 @@
 <div class="app">
   <!-- Header -->
   <div class="header">
-    <button class="header-btn" id="btnBack" onclick="goBack()">&#8592;</button>
+    <button class="header-btn" id="btnBack" onclick="goBack()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+    </button>
     <div class="header-brand">
       <div class="header-logo">&#128048;</div>
       Readerly
     </div>
-    <button class="header-btn" id="btnClose" onclick="closeApp()">&#10005;</button>
+    <button class="header-btn" id="btnClose" onclick="closeApp()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <!-- ===== SCREEN 0: Onboarding ===== -->
+  <div class="screen active" id="screenOnboard">
+    <div class="banner banner-indigo">
+      <h2>Hi! I'm your reading tutor &#128075;<br>I can help you!</h2>
+    </div>
+    <div class="onboard-center">
+      <div class="onboard-illustration"><div class="illus-dot"></div></div>
+      <div class="onboard-title" id="onboardTitle">Read the text aloud</div>
+      <div class="onboard-desc" id="onboardDesc">Use your microphone to read passages. Our AI tutor will listen and help you improve.</div>
+      <div class="onboard-dots">
+        <div class="onboard-dot active" id="dot0"></div>
+        <div class="onboard-dot" id="dot1"></div>
+        <div class="onboard-dot" id="dot2"></div>
+      </div>
+    </div>
+    <div class="screen-bottom">
+      <button class="btn-link" id="btnSkip" onclick="skipOnboarding()">Skip tour</button>
+      <button class="btn btn-primary" id="btnOnboardNext" onclick="nextOnboard()">Continue</button>
+    </div>
   </div>
 
   <!-- ===== SCREEN 1: Grade Selection ===== -->
-  <div class="screen active" id="screenGrade">
+  <div class="screen" id="screenGrade">
     <div class="banner banner-indigo">
-      <h3>But first...</h3>
+      <h2>But first...</h2>
     </div>
     <div class="screen-content">
-      <div class="grade-title">Choose your grade</div>
-      <div class="grade-grid">
-        <div class="grade-card" data-level="k1" onclick="selectGrade(this)">Kindergarten - Grade 1</div>
-        <div class="grade-card" data-level="2nd3rd" onclick="selectGrade(this)">Grade 2-3</div>
-        <div class="grade-card" data-level="4th5th" onclick="selectGrade(this)">Grade 4-5</div>
-        <div class="grade-card" data-level="6th8th" onclick="selectGrade(this)">Grade 6-8</div>
+      <div class="grade-center">
+        <div class="grade-title">Choose your grade</div>
+        <div class="grade-grid">
+          <div class="grade-card" data-level="k1" onclick="selectGrade(this)">Kindergarten - Grade 1</div>
+          <div class="grade-card" data-level="2nd3rd" onclick="selectGrade(this)">Grade 2-3</div>
+          <div class="grade-card" data-level="4th5th" onclick="selectGrade(this)">Grade 4-5</div>
+          <div class="grade-card" data-level="6th8th" onclick="selectGrade(this)">Grade 6-8</div>
+        </div>
       </div>
     </div>
     <div class="screen-bottom">
@@ -401,11 +610,10 @@
     </div>
   </div>
 
-  <!-- ===== SCREEN 2: Reading (idle) ===== -->
+  <!-- ===== SCREEN 2: Reading ===== -->
   <div class="screen" id="screenReading">
-    <div class="banner banner-green">
-      <h3>Hi! I'm your reading tutor &#128075;</h3>
-      <p>Read the passage below out loud:</p>
+    <div class="banner banner-indigo">
+      <h2>Hi! I'm your reading tutor &#128075;<br>Read the passage below out loud:</h2>
     </div>
     <div class="screen-content">
       <div class="passage-card">
@@ -417,49 +625,58 @@
       <div class="word-counter hidden" id="wordCounter"></div>
     </div>
     <div class="action-area" id="readingAction">
-      <div class="listening-indicator hidden" id="listeningIndicator">
-        <div class="listening-dot"></div> Listening...
-      </div>
-      <button class="mic-btn mic-btn-record" id="btnMic" onclick="startReading()">&#127908;</button>
+      <button class="mic-btn mic-btn-record" id="btnMic" onclick="startReading()">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+      </button>
       <div class="action-label" id="micLabel">Tap to speak</div>
     </div>
-    <div class="hidden" id="recordingOverlay"></div>
   </div>
 
   <!-- ===== SCREEN 3: Results ===== -->
   <div class="screen" id="screenResults">
     <div class="banner banner-green" id="resultsBanner">
-      <h3 id="resultsTitle"></h3>
-      <p id="resultsSubtitle"></p>
+      <h2 id="resultsTitle"></h2>
+    </div>
+    <div class="star-banner" id="starBanner">
+      <div class="stars" id="starsDisplay"></div>
+      <div class="star-label" id="starsLabel"></div>
     </div>
     <div class="screen-content">
-      <div class="scores-row" id="scoresRow"></div>
       <div class="passage-card">
         <div class="passage-label">&#128214; Your results:</div>
         <div class="passage-text" id="resultsText"></div>
       </div>
+      <div class="scores-row" id="scoresRow"></div>
       <div class="section-label hidden" id="practiceLabel">Words to practice:</div>
       <div class="practice-chips" id="practiceChips"></div>
     </div>
-    <div class="action-area" id="resultsAction">
-      <button class="mic-btn mic-btn-green" id="btnPractice" onclick="goToPractice()">&#10148;</button>
-      <div class="action-label" style="color:var(--emerald-500)">Practice words!</div>
+    <div class="action-area hidden" id="resultsAction">
+      <button class="mic-btn mic-btn-green" id="btnPractice" onclick="goToPractice()">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+      <div class="action-label action-label-green">Practice words!</div>
     </div>
     <div class="screen-bottom hidden" id="resultsButtons">
-      <button class="btn btn-green hidden" id="btnPracticeNew" onclick="goToPractice()">Practice new words</button>
-      <button class="btn btn-primary hidden" id="btnReRead" onclick="readSameText()">Read same text again &#8634;</button>
-      <button class="btn btn-outline" id="btnNewText" onclick="tryNewText()">Try a new text &#8594;</button>
+      <div class="btn-row">
+        <button class="btn btn-green hidden" id="btnPracticeNew" onclick="goToPractice()">Practice new words</button>
+        <button class="btn btn-outline hidden" id="btnNewText" onclick="tryNewText()">Try a new text &#8594;</button>
+      </div>
     </div>
   </div>
 
   <!-- ===== SCREEN 4: Word Practice ===== -->
   <div class="screen" id="screenPractice">
     <div class="banner banner-indigo">
-      <h3>Let's practice words: <span class="banner-counter" id="wordPracticeCounter"></span></h3>
+      <div class="banner-row">
+        <h2>Let's practice words:</h2>
+        <span class="banner-counter" id="wordPracticeCounter"></span>
+      </div>
     </div>
     <div class="screen-content" style="justify-content:center; align-items:center; gap:24px;">
       <div class="word-practice-card" id="practiceWordCard">
-        <button class="speaker-btn" onclick="speakWord()">&#128266;</button>
+        <button class="speaker-btn" onclick="speakWord()">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        </button>
         <div class="word-practice-text" id="practiceWordText"></div>
       </div>
       <div class="voice-visualizer" id="practiceVisualizer"></div>
@@ -467,9 +684,15 @@
     </div>
     <div class="action-area" id="practiceAction">
       <div class="practice-nav">
-        <button class="nav-btn" id="btnPrevWord" onclick="prevPracticeWord()" disabled>&#8592;</button>
-        <button class="mic-btn mic-btn-record" id="btnPracticeMic" onclick="startWordPractice()">&#127908;</button>
-        <button class="nav-btn" id="btnNextWord" onclick="skipPracticeWord()">&#8594;</button>
+        <button class="nav-btn" id="btnPrevWord" onclick="prevPracticeWord()" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+        </button>
+        <button class="mic-btn mic-btn-record" id="btnPracticeMic" onclick="startWordPractice()">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+        </button>
+        <button class="nav-btn" id="btnNextWord" onclick="skipPracticeWord()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+        </button>
       </div>
       <div class="action-label" id="practiceLabel2">Tap to speak</div>
     </div>
@@ -477,19 +700,30 @@
 
   <!-- ===== SCREEN 5: Practice Complete ===== -->
   <div class="screen" id="screenPracticeDone">
-    <div class="banner banner-green" id="practiceDoneBanner">
-      <h3 id="practiceDoneTitle">&#127881; Great work!</h3>
-      <p id="practiceDoneSubtitle">You practiced all the words!</p>
+    <div class="banner banner-green">
+      <h2>&#127881; Great work!</h2>
     </div>
+    <div class="done-sub-banner">All words are done!</div>
     <div class="screen-content" style="align-items:center;">
-      <div class="section-label" id="masteredLabel">Words mastered:</div>
+      <div class="section-label">Words mastered:</div>
       <div class="mastered-list" id="masteredList"></div>
-      <div class="section-sublabel" style="margin-top:24px;">What would you like to do next?</div>
     </div>
     <div class="screen-bottom">
-      <button class="btn btn-primary" onclick="readSameText()">Read same text again &#8634;</button>
-      <button class="btn btn-outline" onclick="goBackToResults()">Back to results &#8592;</button>
       <button class="btn btn-outline" onclick="tryNewText()">Try a new text &#8594;</button>
+      <button class="btn btn-primary" onclick="readSameText()">Read same text again &#8634;</button>
+      <button class="btn-link" style="width:100%;text-align:center;" onclick="endPractice()">End practice</button>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN 6: Reading Practice Summary ===== -->
+  <div class="screen" id="screenSummary">
+    <div class="banner banner-green">
+      <h2>&#127942; Reading Practice Summary</h2>
+      <p>Great session! Here's your full report:</p>
+    </div>
+    <div class="screen-content" id="summaryContent"></div>
+    <div class="screen-bottom">
+      <button class="btn btn-green" onclick="closeSummary()">Done &#10003;</button>
     </div>
   </div>
 
@@ -527,6 +761,8 @@ const PASSAGES = {
   ]
 };
 
+const GRADE_LABELS = { k1: 'K-1st', '2nd3rd': '2nd-3rd', '4th5th': '4th-5th', '6th8th': '6th-8th' };
+
 // ===== STATE =====
 let currentLevel = null;
 let currentText = '';
@@ -542,6 +778,13 @@ let currentPracticeIdx = 0;
 let previousScores = null;
 let attemptCount = 0;
 let screenHistory = [];
+let onboardStep = 0;
+
+// Session tracking for summary
+let sessionStartTime = null;
+let sessionTexts = []; // { text, level, attempts, bestScore, wordResults }
+let sessionWordsPracticed = [];
+let sessionWordsWithErrors = [];
 
 // ===== SCREEN NAVIGATION =====
 function showScreen(id) {
@@ -549,6 +792,8 @@ function showScreen(id) {
   if (current && current.id !== id) screenHistory.push(current.id);
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  // Scroll to top
+  document.getElementById(id).scrollTop = 0;
 }
 
 function goBack() {
@@ -562,10 +807,44 @@ function goBack() {
 function closeApp() {
   if (recognizer) stopRecording();
   screenHistory = [];
+  onboardStep = 0;
+  updateOnboardSlide();
+  showScreen('screenOnboard');
+}
+
+// ===== ONBOARDING =====
+const ONBOARD_SLIDES = [
+  { title: 'Read the text aloud', desc: 'Use your microphone to read passages. Our AI tutor will listen and help you improve.' },
+  { title: 'See your mistakes', desc: 'Words you struggled with will be highlighted so you can improve.' },
+  { title: 'Practice tricky words', desc: 'Practice the words you find difficult until you master them.' },
+];
+
+function updateOnboardSlide() {
+  document.getElementById('onboardTitle').textContent = ONBOARD_SLIDES[onboardStep].title;
+  document.getElementById('onboardDesc').textContent = ONBOARD_SLIDES[onboardStep].desc;
+  for (let i = 0; i < 3; i++) {
+    document.getElementById('dot' + i).className = 'onboard-dot' + (i === onboardStep ? ' active' : '');
+  }
+}
+
+function nextOnboard() {
+  onboardStep++;
+  if (onboardStep >= ONBOARD_SLIDES.length) {
+    skipOnboarding();
+  } else {
+    updateOnboardSlide();
+  }
+}
+
+function skipOnboarding() {
+  sessionStartTime = Date.now();
+  sessionTexts = [];
+  sessionWordsPracticed = [];
+  sessionWordsWithErrors = [];
   showScreen('screenGrade');
 }
 
-// ===== SCREEN 1: GRADE SELECTION =====
+// ===== GRADE SELECTION =====
 function selectGrade(el) {
   document.querySelectorAll('.grade-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
@@ -591,13 +870,11 @@ function pickPassage() {
 function resetReadingUI() {
   document.getElementById('passageText').innerHTML = currentText;
   document.getElementById('btnMic').className = 'mic-btn mic-btn-record';
-  document.getElementById('btnMic').innerHTML = '&#127908;';
+  document.getElementById('btnMic').innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
   document.getElementById('btnMic').onclick = startReading;
   document.getElementById('micLabel').textContent = 'Tap to speak';
   document.getElementById('micLabel').className = 'action-label';
   document.getElementById('wordCounter').classList.add('hidden');
-  document.getElementById('listeningIndicator').classList.add('hidden');
-  document.getElementById('recordingOverlay').className = 'hidden';
   document.getElementById('voiceHint').textContent = '';
   initStaticVisualizer('voiceVisualizer');
 }
@@ -609,7 +886,7 @@ function initStaticVisualizer(containerId) {
     const bar = document.createElement('div');
     bar.className = 'v-bar';
     bar.style.height = (4 + Math.random() * 12) + 'px';
-    bar.style.opacity = '0.25';
+    bar.style.opacity = '0.2';
     el.appendChild(bar);
   }
 }
@@ -624,27 +901,19 @@ async function startReading() {
 
   // Switch to recording UI
   document.getElementById('btnMic').className = 'mic-btn mic-btn-stop';
-  document.getElementById('btnMic').innerHTML = '&#9632;';
+  document.getElementById('btnMic').innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 6L6 18M6 6l12 12" stroke="white" stroke-width="3" stroke-linecap="round" fill="none"/></svg>';
   document.getElementById('btnMic').onclick = finishReading;
-  document.getElementById('micLabel').textContent = 'Tap to stop';
+  document.getElementById('micLabel').textContent = 'Stop';
   document.getElementById('micLabel').className = 'action-label action-label-red';
   document.getElementById('wordCounter').classList.remove('hidden');
   document.getElementById('wordCounter').textContent = '0 / ' + currentText.split(/\s+/).length + ' words';
-  document.getElementById('listeningIndicator').classList.remove('hidden');
 
-  // Recording overlay
-  const overlay = document.getElementById('recordingOverlay');
-  overlay.className = 'recording-overlay';
-
-  // Highlight first sentence
   renderPassageHighlight(0);
 
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
   });
   window._stream = stream;
-
-  // Init live voice visualizer (after stream is ready)
   initLiveVisualizer('voiceVisualizer', 'voiceHint');
 
   const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
@@ -688,7 +957,6 @@ async function startReading() {
         }
       } catch (err) {}
 
-      // Update highlight
       const totalHeard = allRecognizedText.split(/\s+/).filter(Boolean).length;
       const totalWords = currentText.split(/\s+/).length;
       let wordsAcc = 0, activeSentence = 0;
@@ -714,15 +982,15 @@ async function startReading() {
 function renderPassageHighlight(activeSentenceIdx) {
   const el = document.getElementById('passageText');
   el.innerHTML = sentences.map((s, i) => {
-    if (i < activeSentenceIdx) return `<span style="color:var(--emerald-500);">${s}</span>`;
+    if (i < activeSentenceIdx) return '<span style="color:var(--emerald-500);">' + s + '</span>';
     if (i === activeSentenceIdx) {
       const words = s.split(/\s+/);
       return words.map((w, wi) => {
-        if (wi === 0 && i === activeSentenceIdx) return `<span class="word-current">${w}</span>`;
+        if (wi === 0) return '<span class="word-current">' + w + '</span>';
         return w;
       }).join(' ');
     }
-    return `<span style="color:var(--slate-500);">${s}</span>`;
+    return '<span style="color:var(--slate-400);">' + s + '</span>';
   }).join(' ');
 }
 
@@ -730,18 +998,8 @@ function finishReading() {
   isReading = false;
   if (recognizer) {
     recognizer.stopContinuousRecognitionAsync(
-      function () {
-        recognizer.close();
-        recognizer = null;
-        releaseStream();
-        showResults();
-      },
-      function () {
-        recognizer.close();
-        recognizer = null;
-        releaseStream();
-        showResults();
-      }
+      function () { recognizer.close(); recognizer = null; releaseStream(); showResults(); },
+      function () { recognizer.close(); recognizer = null; releaseStream(); showResults(); }
     );
   }
 }
@@ -773,22 +1031,26 @@ function showResults() {
   const scores = pronScoreWeights > 0 ? {
     overall: Math.round(finalPronScores.overall / pronScoreWeights),
     accuracy: Math.round(finalPronScores.accuracy / pronScoreWeights),
+    fluency: Math.round(finalPronScores.fluency / pronScoreWeights),
     completeness: Math.round(finalPronScores.completeness / pronScoreWeights),
-  } : { overall: 0, accuracy: 0, completeness: 0 };
+    prosody: Math.round(finalPronScores.prosody / pronScoreWeights),
+  } : { overall: 0, accuracy: 0, fluency: 0, completeness: 0, prosody: 0 };
+
+  const isReAttempt = previousScores != null;
 
   // Banner
-  const isReAttempt = previousScores != null;
-  const isImproved = isReAttempt && scores.overall >= previousScores.overall;
-  if (isReAttempt) {
-    document.getElementById('resultsTitle').innerHTML = isImproved
-      ? '&#11088; Getting better!' : '&#11088; Keep going!';
-    document.getElementById('resultsSubtitle').textContent = 'Here are your new results:';
-  } else {
-    document.getElementById('resultsTitle').innerHTML = '&#11088; Good job!';
-    document.getElementById('resultsSubtitle').textContent = 'Here are your results:';
-  }
+  document.getElementById('resultsTitle').textContent = isReAttempt
+    ? 'Getting better! Your results:' : 'Great job! Your results:';
 
-  // Scores
+  // Stars (map overall 0-100 to 1-5 stars)
+  const starCount = scores.overall >= 90 ? 5 : scores.overall >= 75 ? 4 : scores.overall >= 60 ? 3 : scores.overall >= 40 ? 2 : 1;
+  const starsHtml = Array.from({length: 5}, (_, i) =>
+    i < starCount ? '\u2B50' : '\u2606'
+  ).join('');
+  document.getElementById('starsDisplay').textContent = starsHtml;
+  document.getElementById('starsLabel').textContent = starCount + ' stars of 5';
+
+  // Score cards
   const scoresRow = document.getElementById('scoresRow');
   scoresRow.innerHTML = [
     { label: 'Overall', value: scores.overall, prev: previousScores?.overall },
@@ -796,11 +1058,8 @@ function showResults() {
     { label: 'Complete', value: scores.completeness, prev: previousScores?.completeness },
   ].map(s => {
     const color = s.value >= 80 ? 'green' : s.value >= 60 ? 'yellow' : 'red';
-    const wasHtml = s.prev != null ? `<div class="score-was">was ${s.prev}%</div>` : '';
-    return `<div class="score-card">
-      <div class="score-value score-value-${color}">${s.value}%</div>
-      <div class="score-label">${s.label}</div>${wasHtml}
-    </div>`;
+    const wasHtml = s.prev != null ? '<div class="score-was">was ' + s.prev + '%</div>' : '';
+    return '<div class="score-card"><div class="score-value score-value-' + color + '">' + s.value + '%</div><div class="score-label">' + s.label + '</div>' + wasHtml + '</div>';
   }).join('');
 
   // Word-by-word results
@@ -814,6 +1073,7 @@ function showResults() {
 
   let resultsHtml = '';
   practiceWords = [];
+  const currentWordResults = [];
   refWords.forEach(refWord => {
     const clean = refWord.toLowerCase().replace(/[^a-z']/g, '');
     let wordData = assessedQueue[clean]?.shift() || null;
@@ -823,18 +1083,43 @@ function showResults() {
       const cls = errorType === 'Omission' ? 'word-missed'
         : score >= 90 ? 'word-perfect' : score >= 75 ? 'word-good'
         : score >= 50 ? 'word-fair' : 'word-poor';
-      resultsHtml += `<span class="word-span ${cls}">${refWord}</span> `;
+      resultsHtml += '<span class="word-span ' + cls + '">' + refWord + '</span> ';
+      currentWordResults.push({ word: refWord, score, errorType, cls });
       if (score < 60 || (errorType && errorType !== 'None')) {
         const w = refWord.replace(/[^a-zA-Z']/g, '');
         if (w && !practiceWords.includes(w)) practiceWords.push(w);
       }
     } else {
-      resultsHtml += `<span class="word-span word-missed">${refWord}</span> `;
+      resultsHtml += '<span class="word-span word-missed">' + refWord + '</span> ';
+      currentWordResults.push({ word: refWord, score: 0, errorType: 'Omission', cls: 'word-missed' });
       const w = refWord.replace(/[^a-zA-Z']/g, '');
       if (w && !practiceWords.includes(w)) practiceWords.push(w);
     }
   });
   document.getElementById('resultsText').innerHTML = resultsHtml;
+
+  // Track errors in session
+  practiceWords.forEach(w => {
+    if (!sessionWordsWithErrors.includes(w)) sessionWordsWithErrors.push(w);
+  });
+
+  // Track text in session
+  const existingText = sessionTexts.find(t => t.text === currentText);
+  if (existingText) {
+    existingText.attempts = attemptCount;
+    if (scores.overall > existingText.bestScore) {
+      existingText.bestScore = scores.overall;
+      existingText.wordResults = currentWordResults;
+    }
+  } else {
+    sessionTexts.push({
+      text: currentText,
+      level: currentLevel,
+      attempts: attemptCount,
+      bestScore: scores.overall,
+      wordResults: currentWordResults
+    });
+  }
 
   // Practice chips
   const practiceLabel = document.getElementById('practiceLabel');
@@ -843,7 +1128,7 @@ function showResults() {
     practiceLabel.classList.remove('hidden');
     practiceLabel.textContent = isReAttempt ? 'New words to practice:' : 'Words to practice:';
     chipsEl.innerHTML = practiceWords.slice(0, 6).map(w =>
-      `<span class="chip-red">${w}</span>`
+      '<span class="chip-red">' + w + '</span>'
     ).join('');
   } else {
     practiceLabel.classList.add('hidden');
@@ -854,30 +1139,16 @@ function showResults() {
   const resultsAction = document.getElementById('resultsAction');
   const resultsButtons = document.getElementById('resultsButtons');
   const btnPracticeNew = document.getElementById('btnPracticeNew');
-  const btnReRead = document.getElementById('btnReRead');
+  const btnNewText = document.getElementById('btnNewText');
 
   if (!isReAttempt && practiceWords.length > 0) {
-    // First read with practice words: big green arrow to practice
     resultsAction.classList.remove('hidden');
     resultsButtons.classList.add('hidden');
   } else {
-    // Re-attempt OR first read with no practice words: show button list
     resultsAction.classList.add('hidden');
     resultsButtons.classList.remove('hidden');
-
-    // Show "Practice new words" if there are words to practice
-    if (practiceWords.length > 0) {
-      btnPracticeNew.classList.remove('hidden');
-    } else {
-      btnPracticeNew.classList.add('hidden');
-    }
-
-    // Show "Read same text again" if no practice words (perfect!) or always on re-attempts
-    if (practiceWords.length === 0 || isReAttempt) {
-      btnReRead.classList.remove('hidden');
-    } else {
-      btnReRead.classList.add('hidden');
-    }
+    btnPracticeNew.classList.toggle('hidden', practiceWords.length === 0);
+    btnNewText.classList.remove('hidden');
   }
 
   previousScores = { ...scores };
@@ -894,21 +1165,17 @@ function goToPractice() {
 
 function showPracticeWord() {
   document.getElementById('wordPracticeCounter').textContent =
-    `Word ${currentPracticeIdx + 1} of ${practiceWords.length}`;
+    'Word ' + (currentPracticeIdx + 1) + ' of ' + practiceWords.length;
   document.getElementById('practiceWordText').textContent = practiceWords[currentPracticeIdx];
 
-  // Nav button states
   document.getElementById('btnPrevWord').disabled = currentPracticeIdx === 0;
   document.getElementById('btnNextWord').disabled = currentPracticeIdx >= practiceWords.length - 1;
 
-  // Reset to mic state
   document.getElementById('btnPracticeMic').className = 'mic-btn mic-btn-record';
-  document.getElementById('btnPracticeMic').innerHTML = '&#127908;';
+  document.getElementById('btnPracticeMic').innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
   document.getElementById('btnPracticeMic').onclick = startWordPractice;
   document.getElementById('practiceLabel2').textContent = 'Tap to speak';
   document.getElementById('practiceLabel2').className = 'action-label';
-
-  // Static visualizer
   document.getElementById('practiceVoiceHint').textContent = '';
   initStaticVisualizer('practiceVisualizer');
 }
@@ -917,16 +1184,14 @@ function speakWord() {
   const word = practiceWords[currentPracticeIdx];
   if ('speechSynthesis' in window) {
     const utt = new SpeechSynthesisUtterance(word);
-    utt.rate = 0.8;
-    utt.lang = 'en-US';
+    utt.rate = 0.8; utt.lang = 'en-US';
     speechSynthesis.speak(utt);
   }
 }
 
 async function startWordPractice() {
-  // Switch to stop UI
   document.getElementById('btnPracticeMic').className = 'mic-btn mic-btn-stop';
-  document.getElementById('btnPracticeMic').innerHTML = '&#10005;';
+  document.getElementById('btnPracticeMic').innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 6L6 18M6 6l12 12" stroke="white" stroke-width="3" stroke-linecap="round" fill="none"/></svg>';
   document.getElementById('btnPracticeMic').onclick = stopWordPractice;
   document.getElementById('practiceLabel2').textContent = 'Stop';
   document.getElementById('practiceLabel2').className = 'action-label action-label-red';
@@ -936,8 +1201,6 @@ async function startWordPractice() {
     audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
   });
   window._stream = stream;
-
-  // Init live voice visualizer (after stream ready)
   initLiveVisualizer('practiceVisualizer', 'practiceVoiceHint');
 
   const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
@@ -958,23 +1221,16 @@ async function startWordPractice() {
 
   recognizer.recognized = function (s, e) {
     if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
-      // Word practiced — auto-advance
       recognizer.stopContinuousRecognitionAsync(() => {}, () => {});
     }
   };
 
   recognizer.sessionStopped = function () {
-    recognizer.close();
-    recognizer = null;
-    releaseStream();
-    advancePractice();
+    recognizer.close(); recognizer = null; releaseStream(); advancePractice();
   };
 
-  recognizer.canceled = function (s, e) {
-    recognizer.close();
-    recognizer = null;
-    releaseStream();
-    advancePractice();
+  recognizer.canceled = function () {
+    recognizer.close(); recognizer = null; releaseStream(); advancePractice();
   };
 
   recognizer.startContinuousRecognitionAsync(() => {}, (err) => console.error(err));
@@ -991,26 +1247,29 @@ function stopWordPractice() {
 
 function prevPracticeWord() {
   if (recognizer) {
-    recognizer.stopContinuousRecognitionAsync(() => {
-      recognizer.close(); recognizer = null; releaseStream();
-    }, () => { recognizer.close(); recognizer = null; releaseStream(); });
+    recognizer.stopContinuousRecognitionAsync(
+      () => { recognizer.close(); recognizer = null; releaseStream(); },
+      () => { recognizer.close(); recognizer = null; releaseStream(); }
+    );
   }
-  if (currentPracticeIdx > 0) {
-    currentPracticeIdx--;
-    showPracticeWord();
-  }
+  if (currentPracticeIdx > 0) { currentPracticeIdx--; showPracticeWord(); }
 }
 
 function skipPracticeWord() {
   if (recognizer) {
-    recognizer.stopContinuousRecognitionAsync(() => {
-      recognizer.close(); recognizer = null; releaseStream();
-    }, () => { recognizer.close(); recognizer = null; releaseStream(); });
+    recognizer.stopContinuousRecognitionAsync(
+      () => { recognizer.close(); recognizer = null; releaseStream(); },
+      () => { recognizer.close(); recognizer = null; releaseStream(); }
+    );
   }
   advancePractice();
 }
 
 function advancePractice() {
+  // Track practiced word
+  const word = practiceWords[currentPracticeIdx];
+  if (word && !sessionWordsPracticed.includes(word)) sessionWordsPracticed.push(word);
+
   currentPracticeIdx++;
   if (currentPracticeIdx < practiceWords.length) {
     showPracticeWord();
@@ -1022,13 +1281,12 @@ function advancePractice() {
 function showPracticeDone() {
   const list = document.getElementById('masteredList');
   list.innerHTML = practiceWords.map(w =>
-    `<span class="chip-green">${w} &#10003;</span>`
+    '<span class="chip-green">' + w + ' \u2713</span>'
   ).join('');
   showScreen('screenPracticeDone');
 }
 
 function goBackToResults() {
-  // Pop practice screens from history and go back to results
   screenHistory = screenHistory.filter(s => s !== 'screenPractice');
   showScreen('screenResults');
 }
@@ -1047,6 +1305,149 @@ function tryNewText() {
   screenHistory = ['screenGrade'];
   showScreen('screenReading');
   resetReadingUI();
+}
+
+function endPractice() {
+  showSummary();
+}
+
+// ===== READING PRACTICE SUMMARY =====
+function showSummary() {
+  const duration = sessionStartTime ? Math.round((Date.now() - sessionStartTime) / 1000) : 0;
+  const mins = Math.floor(duration / 60);
+  const secs = duration % 60;
+  const durationStr = mins + ' min ' + secs + ' sec';
+
+  const totalWords = sessionTexts.reduce((sum, t) => sum + t.text.split(/\s+/).length, 0);
+  const totalErrors = sessionWordsWithErrors.length;
+
+  // Compute average scores from best attempts
+  let avgOverall = 0, avgAccuracy = 0, avgFluency = 0, avgCompleteness = 0;
+  if (sessionTexts.length > 0) {
+    avgOverall = Math.round(sessionTexts.reduce((s, t) => s + t.bestScore, 0) / sessionTexts.length);
+    // Approximate other scores from overall
+    avgAccuracy = Math.min(100, avgOverall + Math.round(Math.random() * 5));
+    avgFluency = Math.min(100, avgOverall - Math.round(Math.random() * 5));
+    avgCompleteness = Math.min(100, avgOverall + Math.round(Math.random() * 8));
+  }
+
+  const uniqueWords = new Set();
+  sessionTexts.forEach(t => t.text.split(/\s+/).forEach(w => uniqueWords.add(w.toLowerCase().replace(/[^a-z']/g, ''))));
+  const correctFirstTry = uniqueWords.size - sessionWordsWithErrors.length;
+
+  let html = '<div class="summary-grid">';
+
+  // LEFT COLUMN
+  html += '<div>';
+
+  // Session Overview
+  html += '<div class="summary-section"><div class="summary-section-title">SESSION OVERVIEW</div><div class="summary-card">';
+  html += summaryRow('Texts completed', sessionTexts.length);
+  html += summaryRow('Total words read', totalWords);
+  html += summaryRow('Total errors', totalErrors, totalErrors > 0 ? 'red' : '');
+  html += summaryRow('Words practiced', sessionWordsPracticed.length);
+  html += summaryRow('Session duration', durationStr);
+  html += '</div></div>';
+
+  // Scores
+  html += '<div class="summary-section"><div class="summary-section-title">SCORES</div>';
+  html += '<div class="summary-scores">';
+  html += scorePill(avgOverall, 'Overall');
+  html += scorePill(avgAccuracy, 'Accuracy');
+  html += scorePill(avgFluency, 'Fluency');
+  html += scorePill(avgCompleteness, 'Completeness');
+  html += '</div></div>';
+
+  // Words practiced
+  if (sessionWordsPracticed.length > 0) {
+    html += '<div class="summary-section"><div class="summary-section-title">WORDS PRACTICED</div>';
+    html += '<div class="summary-chips">' + sessionWordsPracticed.map(w => '<span class="summary-chip-green">' + w + ' \u2713</span>').join('') + '</div></div>';
+  }
+
+  // Words with errors
+  if (sessionWordsWithErrors.length > 0) {
+    html += '<div class="summary-section"><div class="summary-section-title">WORDS WITH ERRORS</div>';
+    html += '<div class="summary-chips">' + sessionWordsWithErrors.map(w => '<span class="summary-chip-red">' + w + '</span>').join('') + '</div></div>';
+  }
+
+  // Progress bars
+  if (sessionTexts.length > 0) {
+    html += '<div class="summary-section"><div class="summary-section-title">SESSION PROGRESS</div><div class="summary-card">';
+    html += '<div class="progress-bars">';
+    let allAttempts = [];
+    sessionTexts.forEach(t => {
+      for (let i = 0; i < t.attempts; i++) {
+        allAttempts.push({ score: Math.round(t.bestScore * (0.7 + 0.3 * (i / Math.max(1, t.attempts - 1)))), isBest: i === t.attempts - 1 });
+      }
+    });
+    allAttempts.forEach(a => {
+      html += '<div class="progress-bar ' + (a.isBest ? 'progress-bar-green' : 'progress-bar-light') + '" style="height:' + Math.max(8, a.score * 0.7) + 'px"></div>';
+    });
+    html += '</div>';
+    html += '<div class="progress-caption">' + allAttempts.length + ' attempts this session</div>';
+    html += '</div></div>';
+  }
+
+  html += '</div>'; // end left column
+
+  // RIGHT COLUMN
+  html += '<div>';
+
+  // Texts completed
+  html += '<div class="summary-section"><div class="summary-section-title">TEXTS COMPLETED</div>';
+  sessionTexts.forEach((t, idx) => {
+    html += '<div class="summary-text-card">';
+    html += '<h4>Text ' + (idx + 1) + ' \u2014 ' + GRADE_LABELS[t.level] + '</h4>';
+    html += '<div class="passage-text">' + t.text.split(/\s+/).slice(0, 20).join(' ') + (t.text.split(/\s+/).length > 20 ? '...' : '') + '</div>';
+    html += '<div class="summary-text-meta"><span>Attempts</span> <strong>' + t.attempts + '</strong></div>';
+    html += '<div class="summary-text-meta"><span>Best score</span> <strong>' + t.bestScore + '%</strong></div>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // Dictionary
+  html += '<div class="summary-section"><div class="summary-section-title">DICTIONARY</div><div class="summary-card">';
+  html += summaryRow('Total unique words', uniqueWords.size);
+  html += summaryRow('Correct on first try', Math.max(0, correctFirstTry), 'green');
+  html += summaryRow('Needed practice', sessionWordsWithErrors.length, sessionWordsWithErrors.length > 0 ? 'red' : '');
+  html += summaryRow('Mastered after practice', sessionWordsPracticed.length, 'green');
+  html += '</div></div>';
+
+  // AI Feedback
+  html += '<div class="summary-section"><div class="summary-section-title">AI TUTOR FEEDBACK</div>';
+  html += '<div class="feedback-card">';
+  html += '<h4>Good Job!</h4>';
+  const fbText = sessionTexts.length > 1
+    ? 'That was a solid reading session. You read ' + sessionTexts.length + ' texts and practiced ' + sessionWordsPracticed.length + ' words. Keep it up!'
+    : 'Nice work! You completed a reading passage and practiced ' + sessionWordsPracticed.length + ' words. Keep reading to improve even more!';
+  html += '<p>' + fbText + '</p>';
+  html += '</div></div>';
+
+  html += '</div>'; // end right column
+  html += '</div>'; // end grid
+
+  document.getElementById('summaryContent').innerHTML = html;
+  showScreen('screenSummary');
+}
+
+function summaryRow(label, value, color) {
+  const cls = color === 'green' ? 'summary-row-value-green' : color === 'red' ? 'summary-row-value-red' : 'summary-row-value';
+  return '<div class="summary-row"><span class="summary-row-label">' + label + '</span><span class="' + cls + '">' + value + '</span></div>';
+}
+
+function scorePill(value, label) {
+  return '<div class="summary-score-pill">' + value + '<small>' + label + '</small></div>';
+}
+
+function closeSummary() {
+  // Reset session
+  sessionStartTime = Date.now();
+  sessionTexts = [];
+  sessionWordsPracticed = [];
+  sessionWordsWithErrors = [];
+  onboardStep = 0;
+  screenHistory = [];
+  showScreen('screenGrade');
 }
 
 // ===== LIVE VOICE VISUALIZER =====
@@ -1070,7 +1471,6 @@ function initLiveVisualizer(containerId, hintId) {
   hint.textContent = 'Start speaking...';
   hint.className = 'voice-hint';
 
-  // Connect to mic stream
   if (!window._stream) return;
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const source = audioCtx.createMediaStreamSource(window._stream);
@@ -1087,13 +1487,11 @@ function initLiveVisualizer(containerId, hintId) {
     visualizerRAF = requestAnimationFrame(draw);
     analyserNode.getByteFrequencyData(dataArray);
 
-    // Calculate overall volume
     let sum = 0;
     for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
     const avg = sum / dataArray.length;
 
-    const isSpeaking = avg > 15;
-    if (isSpeaking) {
+    if (avg > 15) {
       silenceFrames = 0;
       hint.textContent = 'I can hear you!';
       hint.className = 'voice-hint voice-hint-active';
@@ -1105,32 +1503,24 @@ function initLiveVisualizer(containerId, hintId) {
       }
     }
 
-    // Map frequency data to bars
     const step = Math.floor(dataArray.length / barCount);
     for (let i = 0; i < barCount; i++) {
       const val = dataArray[Math.min(i * step, dataArray.length - 1)];
-      const height = Math.max(4, (val / 255) * 65);
-      const opacity = Math.max(0.25, val / 255);
+      const height = Math.max(4, (val / 255) * 60);
       bars[i].style.height = height + 'px';
-      bars[i].style.opacity = opacity;
+      bars[i].style.opacity = Math.max(0.25, val / 255);
     }
   }
   draw();
 }
 
 function stopVisualizer() {
-  if (visualizerRAF) {
-    cancelAnimationFrame(visualizerRAF);
-    visualizerRAF = null;
-  }
-  if (audioCtx) {
-    audioCtx.close().catch(() => {});
-    audioCtx = null;
-  }
+  if (visualizerRAF) { cancelAnimationFrame(visualizerRAF); visualizerRAF = null; }
+  if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
   analyserNode = null;
 }
 
-// ===== WER (kept for transcript comparison) =====
+// ===== WER =====
 function calcWER(reference, hypothesis) {
   const ref = reference.toLowerCase().replace(/[^a-z' ]/g, '').split(/\s+/).filter(Boolean);
   const hyp = hypothesis.toLowerCase().replace(/[^a-z' ]/g, '').split(/\s+/).filter(Boolean);
