@@ -285,38 +285,45 @@
   }
   .situation-chip:hover { border-color: var(--indigo-400); background: var(--indigo-50); }
 
-  /* ===== LISTEN SCREEN ===== */
-  .voice-picker {
-    display: flex; gap: 8px; justify-content: center;
-    flex-wrap: wrap; margin: 0 auto 16px; max-width: 480px;
+  /* ===== VOICE PICKER (dedicated screen) ===== */
+  .voice-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    width: 100%; max-width: 420px; margin: 0 auto;
   }
-  .voice-chip {
-    flex: 1 1 0; min-width: 80px; max-width: 110px;
-    display: flex; flex-direction: column; align-items: center;
-    gap: 4px; padding: 10px 8px;
+  .voice-card {
     background: var(--white); border: 2px solid var(--slate-200);
-    border-radius: 12px; cursor: pointer; transition: all 0.2s;
-    font-family: 'Rubik', sans-serif;
+    border-radius: 16px; padding: 18px 12px;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 6px; cursor: pointer; transition: all 0.2s;
+    font-family: 'Rubik', sans-serif; text-align: center;
   }
-  .voice-chip:hover { border-color: var(--indigo-400); background: var(--indigo-50); }
-  .voice-chip.selected {
+  .voice-card:hover { border-color: var(--indigo-400); background: var(--indigo-50); }
+  .voice-card.selected {
     border-color: var(--indigo-500); background: var(--indigo-50);
   }
-  .voice-emoji { font-size: 28px; line-height: 1; }
-  .voice-name { font-size: 13px; font-weight: 600; color: var(--slate-700); }
-  .voice-chip.selected .voice-name { color: var(--indigo-700); }
-  .listen-speaker {
-    display: flex; justify-content: center; align-items: center;
-    margin: 24px 0;
+  .voice-card-emoji { font-size: 44px; line-height: 1; }
+  .voice-card-name { font-size: 16px; font-weight: 700; color: var(--slate-900); }
+  .voice-card-desc { font-size: 12px; color: var(--slate-500); }
+  .voice-card.selected .voice-card-name { color: var(--indigo-700); }
+
+  /* ===== LISTEN SCREEN ===== */
+  .listen-controls {
+    display: flex; justify-content: center; margin: 20px 0;
   }
-  .listen-speaker-icon {
-    font-size: 56px;
-    animation: speaker-pulse 1.6s ease-in-out infinite;
+  .listen-control-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 28px; min-width: 160px;
+    background: var(--indigo-500); color: white;
+    border: none; border-radius: 999px; cursor: pointer;
+    font-family: 'Rubik', sans-serif; font-size: 16px; font-weight: 600;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
   }
-  @keyframes speaker-pulse {
-    0%, 100% { transform: scale(1); opacity: 0.7; }
-    50% { transform: scale(1.15); opacity: 1; }
+  .listen-control-btn:hover:not(:disabled) {
+    background: var(--indigo-600); transform: translateY(-1px);
   }
+  .listen-control-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .listen-control-icon { font-size: 22px; line-height: 1; }
   .word-now-speaking {
     background: var(--indigo-100); border-radius: 4px;
     padding: 1px 3px;
@@ -326,7 +333,7 @@
     color: var(--slate-500);
   }
   #listenSkip {
-    margin: 0 auto; display: block;
+    margin: 8px auto 0; display: block;
   }
 
   /* ===== GENERATING SCREEN ===== */
@@ -859,7 +866,21 @@
       </div>
     </div>
     <div class="screen-bottom">
-      <button class="btn btn-primary" onclick="goToListen()">Start practicing &#8594;</button>
+      <button class="btn btn-primary" onclick="goToVoicePick()">Start practicing &#8594;</button>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: Voice Pick ===== -->
+  <div class="screen" id="screenVoicePick">
+    <div class="banner banner-indigo">
+      <h2>Pick your reading buddy &#127908;</h2>
+      <p>Who should read the story to you?</p>
+    </div>
+    <div class="screen-content">
+      <div class="voice-grid" id="voicePickerGrid"></div>
+    </div>
+    <div class="screen-bottom">
+      <button class="btn btn-primary" id="btnStartListen" onclick="goToListen()">Start listening &#8594;</button>
     </div>
   </div>
 
@@ -867,16 +888,18 @@
   <div class="screen" id="screenListen">
     <div class="banner banner-indigo">
       <h2 id="listenTitle">First, listen carefully &#128064;</h2>
-      <p id="listenSubtitle">Pick a buddy to read to you, then follow along.</p>
+      <p id="listenSubtitle"><span id="listenStatus">Getting your story ready...</span></p>
     </div>
     <div class="screen-content">
-      <div class="voice-picker" id="voicePicker"></div>
       <div class="passage-card">
         <div class="passage-label">&#128266; Listening...</div>
         <div class="passage-text" id="listenPassageText"></div>
       </div>
-      <div class="listen-speaker" id="listenSpeaker">
-        <div class="listen-speaker-icon">&#128266;</div>
+      <div class="listen-controls">
+        <button class="listen-control-btn" id="btnPauseNarration" onclick="togglePause()" disabled>
+          <span class="listen-control-icon" id="pauseIcon">&#9208;</span>
+          <span class="listen-control-label" id="pauseLabel">Pause</span>
+        </button>
       </div>
       <button class="btn-link" id="listenSkip" onclick="skipListen()">Skip listening &#8594;</button>
     </div>
@@ -1310,11 +1333,17 @@ function showGetReady() {
   showScreen('screenGetReady');
 }
 
+function goToVoicePick() {
+  renderVoicePicker();
+  showScreen('screenVoicePick');
+}
+
 function goToListen() {
   document.getElementById('listenAction').classList.add('hidden');
   document.getElementById('listenSkip').classList.remove('hidden');
+  document.getElementById('listenStatus').textContent = 'Getting your story ready...';
+  setPauseButtonState('loading');
   renderListenPassage();
-  renderVoicePicker();
   showScreen('screenListen');
   startNarration();
 }
@@ -1337,7 +1366,7 @@ const READERLY_VOICES = [
 ];
 const VOICE_RATE = '-15%'; // slow, kid-friendly
 let currentVoiceId = localStorage.getItem('readerly_voice') || 'en-US-AriaNeural';
-let narrationState = { active: false, runId: 0, synthesizer: null };
+let narrationState = { active: false, runId: 0, synthesizer: null, audio: null, audioUrl: null, wordEvents: [] };
 
 function getVoice(id) {
   return READERLY_VOICES.find(v => v.id === id) || READERLY_VOICES[0];
@@ -1369,13 +1398,14 @@ function buildSsml(text, voice) {
 }
 
 function renderVoicePicker() {
-  const row = document.getElementById('voicePicker');
-  if (!row) return;
-  row.innerHTML = READERLY_VOICES.map(v =>
-    '<button class="voice-chip' + (v.id === currentVoiceId ? ' selected' : '') +
+  const grid = document.getElementById('voicePickerGrid');
+  if (!grid) return;
+  grid.innerHTML = READERLY_VOICES.map(v =>
+    '<button class="voice-card' + (v.id === currentVoiceId ? ' selected' : '') +
     '" data-voice="' + v.id + '" onclick="setVoice(\'' + v.id + '\')">' +
-      '<span class="voice-emoji">' + v.emoji + '</span>' +
-      '<span class="voice-name">' + v.name + '</span>' +
+      '<span class="voice-card-emoji">' + v.emoji + '</span>' +
+      '<span class="voice-card-name">' + v.name + '</span>' +
+      '<span class="voice-card-desc">' + v.desc + '</span>' +
     '</button>'
   ).join('');
 }
@@ -1385,15 +1415,16 @@ function setVoice(id) {
   currentVoiceId = id;
   localStorage.setItem('readerly_voice', id);
   renderVoicePicker();
-  // If we're mid-narration, restart with the new voice.
-  if (narrationState.active) startNarration();
 }
 
+// Synthesizes the whole passage to an MP3 buffer, then plays through an HTML5
+// <audio> element we own. This gives us real pause/resume/stop, and ensures
+// "Skip listening" actually silences audio (Azure's auto-play buffers chunks
+// that the synthesizer's close() doesn't always interrupt).
 function startNarration() {
-  stopNarration(); // cancel any in-flight synth before starting new one
+  stopNarration();
 
   if (!window.SpeechSDK) {
-    // SDK didn't load — gracefully skip listen step.
     document.getElementById('listenAction').classList.remove('hidden');
     return;
   }
@@ -1401,47 +1432,120 @@ function startNarration() {
   narrationState.runId++;
   const myRun = narrationState.runId;
   narrationState.active = true;
+  narrationState.wordEvents = [];
   document.getElementById('listenAction').classList.add('hidden');
+  document.getElementById('listenStatus').textContent = 'Getting your story ready...';
+  setPauseButtonState('loading');
 
   const voice = getVoice(currentVoiceId);
   const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
   speechConfig.speechSynthesisVoiceName = voice.id;
-  const audioConfig = SpeechSDK.AudioConfig.fromDefaultSpeakerOutput();
-  const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
+  speechConfig.speechSynthesisOutputFormat =
+    SpeechSDK.SpeechSynthesisOutputFormat.Audio16Khz64KBitRateMonoMp3;
+
+  // No AudioConfig — synthesize to result.audioData buffer only, no auto-play.
+  const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, undefined);
   narrationState.synthesizer = synthesizer;
 
-  // wordBoundary fires for each spoken word, with textOffset into the SSML.
-  // We strip SSML tags so the offset lands inside the prosody-wrapped text.
-  // Since we wrap the whole passage in one prosody block, offsets are stable.
-  const ssmlPrefixLen = buildSsml('', voice).indexOf('</prosody>'); // length up to text start
+  // wordBoundary fires during synthesis. textOffset is into the SSML string.
+  const ssmlPrefixLen = buildSsml('', voice).indexOf('</prosody>');
   synthesizer.wordBoundary = (s, e) => {
     if (myRun !== narrationState.runId) return;
-    const textStartInSsml = ssmlPrefixLen;
-    const offsetInText = e.textOffset - textStartInSsml;
-    highlightAtOffset(offsetInText);
-  };
-  synthesizer.synthesisCompleted = () => {
-    if (myRun !== narrationState.runId) return;
-    finishNarration();
+    let offset = e.textOffset - ssmlPrefixLen;
+    // Defensive: some SDK paths give offsets relative to text; fall back to raw offset.
+    if (offset < 0 || offset > currentText.length) offset = e.textOffset;
+    const safe = Math.max(0, Math.min(offset, currentText.length));
+    const wordIdx = (currentText.slice(0, safe).match(/\S+/g) || []).length;
+    const audioMs = e.audioOffset / 10000; // ticks (100ns) → ms
+    narrationState.wordEvents.push({ wordIdx, audioMs });
   };
 
   const ssml = buildSsml(currentText, voice);
   synthesizer.speakSsmlAsync(
     ssml,
-    () => { /* success — onSynthesisCompleted handles UI */ },
+    (result) => {
+      try { synthesizer.close(); } catch (_) {}
+      if (myRun !== narrationState.runId) return;
+      if (result.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
+        playSynthBuffer(result.audioData, myRun);
+      } else {
+        console.error('Synthesis failed:', result.errorDetails || result.reason);
+        finishNarration();
+      }
+    },
     (err) => {
+      try { synthesizer.close(); } catch (_) {}
       console.error('Azure TTS error:', err);
       if (myRun === narrationState.runId) finishNarration();
     }
   );
 }
 
-function highlightAtOffset(textOffset) {
-  // textOffset is into the (decoded) passage text. Count whitespace-separated tokens up to it.
-  const safe = Math.max(0, Math.min(textOffset, currentText.length));
-  const preface = currentText.slice(0, safe);
-  const wordIdx = (preface.match(/\S+/g) || []).length;
-  highlightWord(wordIdx);
+function playSynthBuffer(audioData, myRun) {
+  if (myRun !== narrationState.runId) return;
+  const blob = new Blob([audioData], { type: 'audio/mpeg' });
+  const url = URL.createObjectURL(blob);
+  const audio = new Audio(url);
+  narrationState.audio = audio;
+  narrationState.audioUrl = url;
+
+  const events = narrationState.wordEvents;
+  audio.ontimeupdate = () => {
+    if (myRun !== narrationState.runId) return;
+    const currentMs = audio.currentTime * 1000;
+    let wordIdx = 0;
+    for (let i = 0; i < events.length; i++) {
+      if (events[i].audioMs <= currentMs) wordIdx = events[i].wordIdx;
+      else break;
+    }
+    highlightWord(wordIdx);
+  };
+  audio.onended = () => {
+    if (myRun === narrationState.runId) finishNarration();
+  };
+  audio.onerror = (e) => {
+    console.error('Audio playback error:', e);
+    if (myRun === narrationState.runId) finishNarration();
+  };
+
+  document.getElementById('listenStatus').textContent = "I'm reading to you. Follow along.";
+  setPauseButtonState('playing');
+  audio.play().catch(err => {
+    console.error('Play failed:', err);
+    if (myRun === narrationState.runId) finishNarration();
+  });
+}
+
+function togglePause() {
+  const audio = narrationState.audio;
+  if (!audio) return;
+  if (audio.paused) {
+    audio.play();
+    setPauseButtonState('playing');
+  } else {
+    audio.pause();
+    setPauseButtonState('paused');
+  }
+}
+
+function setPauseButtonState(state) {
+  const btn = document.getElementById('btnPauseNarration');
+  const icon = document.getElementById('pauseIcon');
+  const label = document.getElementById('pauseLabel');
+  if (!btn) return;
+  if (state === 'loading') {
+    btn.disabled = true;
+    icon.innerHTML = '&#8987;';
+    label.textContent = 'Loading';
+  } else if (state === 'paused') {
+    btn.disabled = false;
+    icon.innerHTML = '&#9654;';
+    label.textContent = 'Resume';
+  } else {
+    btn.disabled = false;
+    icon.innerHTML = '&#9208;';
+    label.textContent = 'Pause';
+  }
 }
 
 function highlightWord(absoluteIdx) {
@@ -1480,6 +1584,18 @@ function skipListen() {
 function stopNarration() {
   narrationState.active = false;
   narrationState.runId++; // invalidates any in-flight callbacks
+  if (narrationState.audio) {
+    try {
+      narrationState.audio.pause();
+      narrationState.audio.src = '';
+      narrationState.audio.load();
+    } catch (e) {}
+    narrationState.audio = null;
+  }
+  if (narrationState.audioUrl) {
+    try { URL.revokeObjectURL(narrationState.audioUrl); } catch (e) {}
+    narrationState.audioUrl = null;
+  }
   if (narrationState.synthesizer) {
     try { narrationState.synthesizer.close(); } catch (e) {}
     narrationState.synthesizer = null;
