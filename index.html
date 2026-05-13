@@ -1495,16 +1495,31 @@ function playSynthBuffer(audioData, myRun) {
   narrationState.audioUrl = url;
 
   const events = narrationState.wordEvents;
-  audio.ontimeupdate = () => {
+  let lastHighlightIdx = -1;
+  let lastEventCursor = 0; // monotonic — events are time-ordered, so we don't rescan from 0
+
+  // rAF gives 60Hz tracking, much smoother than the 4-12Hz `timeupdate` event
+  // (especially in Safari). We also skip the DOM write when the word index hasn't
+  // moved, which kills the layout/scroll thrash that was making the UI jump.
+  function tickHighlight() {
     if (myRun !== narrationState.runId) return;
+    if (audio.paused || audio.ended) return;
     const currentMs = audio.currentTime * 1000;
-    let wordIdx = 0;
-    for (let i = 0; i < events.length; i++) {
-      if (events[i].audioMs <= currentMs) wordIdx = events[i].wordIdx;
-      else break;
+    while (
+      lastEventCursor + 1 < events.length &&
+      events[lastEventCursor + 1].audioMs <= currentMs
+    ) {
+      lastEventCursor++;
     }
-    highlightWord(wordIdx);
-  };
+    const wordIdx = events.length ? events[lastEventCursor].wordIdx : 0;
+    if (wordIdx !== lastHighlightIdx) {
+      paintHighlight(wordIdx, lastHighlightIdx);
+      lastHighlightIdx = wordIdx;
+    }
+    requestAnimationFrame(tickHighlight);
+  }
+
+  audio.onplay = () => requestAnimationFrame(tickHighlight);
   audio.onended = () => {
     if (myRun === narrationState.runId) finishNarration();
   };
@@ -1519,6 +1534,33 @@ function playSynthBuffer(audioData, myRun) {
     console.error('Play failed:', err);
     if (myRun === narrationState.runId) finishNarration();
   });
+}
+
+// Differential DOM update: only touch spans whose state actually changes
+// between the previous active word and the new one. Avoids redrawing every
+// span on every tick.
+function paintHighlight(newIdx, prevIdx) {
+  const spans = document.querySelectorAll('#listenPassageText .listen-word');
+  if (!spans.length) return;
+  if (prevIdx >= 0 && spans[prevIdx]) {
+    spans[prevIdx].classList.remove('word-now-speaking');
+    spans[prevIdx].classList.add('word-spoken');
+  }
+  // Catch up any spans we may have skipped (e.g., rAF dropped frames)
+  for (let i = Math.max(0, prevIdx + 1); i < newIdx; i++) {
+    if (spans[i]) spans[i].classList.add('word-spoken');
+  }
+  const current = spans[newIdx];
+  if (current) {
+    current.classList.add('word-now-speaking');
+    current.classList.remove('word-spoken');
+    // Only scroll forward when the word is below the visible window. We never
+    // scroll up, which is what was causing the back-and-forth bouncing.
+    const rect = current.getBoundingClientRect();
+    if (rect.bottom > window.innerHeight - 120) {
+      current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
 }
 
 function togglePause() {
