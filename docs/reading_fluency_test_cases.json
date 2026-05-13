@@ -1,0 +1,100 @@
+{
+  "suite": "reading_fluency_prompt_v4",
+  "promptFile": "reading_fluency_generation_prompt_v4.md",
+  "model": "gemini-2.5-flash",
+  "categories": {
+    "coverage": {
+      "description": "One passage per role x grade cell.",
+      "cases": [
+        {"id": "C-01", "grade": "K-2", "role": "Narrate an audiobook", "situation": "A puppy hides under the porch during a thunderstorm"},
+        {"id": "C-02", "grade": "K-2", "role": "Host a podcast", "situation": "Why some animals only come out at night"},
+        {"id": "C-03", "grade": "K-2", "role": "Give a talk", "situation": "Recess should be longer"},
+        {"id": "C-04", "grade": "K-2", "role": "Teach a lesson", "situation": "How rain gets into clouds"},
+        {"id": "C-05", "grade": "K-2", "role": "Perform a scene", "situation": "A snail who is in a hurry"},
+        {"id": "C-06", "grade": "3-5", "role": "Narrate an audiobook", "situation": "A girl finds a key in her grandmother's garden"},
+        {"id": "C-07", "grade": "3-5", "role": "Host a podcast", "situation": "Octopuses can taste with their arms"},
+        {"id": "C-08", "grade": "3-5", "role": "Give a talk", "situation": "Schools should teach kids how to fail"},
+        {"id": "C-09", "grade": "3-5", "role": "Teach a lesson", "situation": "How a seed becomes a plant"},
+        {"id": "C-10", "grade": "3-5", "role": "Perform a scene", "situation": "A grumpy mountain who's tired of hikers"},
+        {"id": "C-11", "grade": "6-8", "role": "Narrate an audiobook", "situation": "A boy who lies to his best friend without meaning to"},
+        {"id": "C-12", "grade": "6-8", "role": "Host a podcast", "situation": "The internet was not designed for this"},
+        {"id": "C-13", "grade": "6-8", "role": "Give a talk", "situation": "Letting AI grade homework is a bad idea"},
+        {"id": "C-14", "grade": "6-8", "role": "Teach a lesson", "situation": "How vaccines train the immune system"},
+        {"id": "C-15", "grade": "6-8", "role": "Perform a scene", "situation": "A teenager waiting in the principal's office"},
+        {"id": "C-16", "grade": "9-12", "role": "Narrate an audiobook", "situation": "A nurse working the last hour of a 16-hour shift"},
+        {"id": "C-17", "grade": "9-12", "role": "Host a podcast", "situation": "Loneliness is a public health crisis"},
+        {"id": "C-18", "grade": "9-12", "role": "Give a talk", "situation": "We are romanticizing burnout"},
+        {"id": "C-19", "grade": "9-12", "role": "Teach a lesson", "situation": "What entropy actually means"},
+        {"id": "C-20", "grade": "9-12", "role": "Perform a scene", "situation": "An astronaut writing a letter home she will never send"}
+      ]
+    },
+    "situationCompatibility": {
+      "description": "Incompatible situation/grade pairs - verifies v4 fallback rule.",
+      "cases": [
+        {"id": "SC-01", "grade": "K-2", "role": "Teach a lesson", "situation": "Quantum entanglement"},
+        {"id": "SC-02", "grade": "K-2", "role": "Give a talk", "situation": "Tax policy should be progressive"},
+        {"id": "SC-03", "grade": "9-12", "role": "Perform a scene", "situation": "A puppy hides under the porch"},
+        {"id": "SC-04", "grade": "3-5", "role": "Host a podcast", "situation": "The geopolitics of rare earth minerals"},
+        {"id": "SC-05", "grade": "6-8", "role": "Narrate an audiobook", "situation": "I had a sandwich for lunch"}
+      ]
+    },
+    "structural": {
+      "description": "Role-specific structural rules.",
+      "cases": [
+        {"id": "ST-01", "grade": "3-5", "role": "Narrate an audiobook", "situation": "A boy finds an old radio in the attic", "checks": ["third_person", "has_dialogue_tag", "short_sentence_after_long"]},
+        {"id": "ST-02", "grade": "6-8", "role": "Host a podcast", "situation": "Why we trust strangers on the internet", "checks": ["first_person", "min_2_you", "counter_intuitive_open"]},
+        {"id": "ST-03", "grade": "6-8", "role": "Give a talk", "situation": "Phones should be banned in classrooms", "checks": ["no_passive_in_core_args", "bold_claim_open", "counter_addressed"]},
+        {"id": "ST-04", "grade": "9-12", "role": "Give a talk", "situation": "Productivity is a moral framework, not a neutral one", "checks": ["one_rhetorical_device", "no_vague_call_to_action"]},
+        {"id": "ST-05", "grade": "K-2", "role": "Teach a lesson", "situation": "Why ice melts", "checks": ["second_person", "define_in_first_two", "one_concept_only"]},
+        {"id": "ST-06", "grade": "6-8", "role": "Teach a lesson", "situation": "How antibiotics work", "checks": ["epistemic_framing", "closing_is_implication"]},
+        {"id": "ST-07", "grade": "K-2", "role": "Perform a scene", "situation": "A dragon who is afraid of fire", "checks": ["6_to_10_lines", "no_tier_tags", "not_a_child_character"]},
+        {"id": "ST-08", "grade": "9-12", "role": "Perform a scene", "situation": "A retired chess player at a tournament he wasn't invited to", "checks": ["first_person", "self_interruption", "singular_voice"]}
+      ]
+    },
+    "vocabulary": {
+      "description": "Tier tag system.",
+      "cases": [
+        {"id": "V-01", "grade": "K-2", "role": "Narrate an audiobook", "situation": "A child plants a seed for the first time", "checks": ["no_t3_tags", "max_2_t2_tags", "t2_clarified_in_context"]},
+        {"id": "V-02", "grade": "6-8", "role": "Teach a lesson", "situation": "How plate tectonics shapes mountains", "checks": ["5_to_8_combined_tags", "tags_inline_no_glossary"]},
+        {"id": "V-03", "grade": "9-12", "role": "Teach a lesson", "situation": "Bayesian reasoning", "checks": ["t3_defined_implicitly"]},
+        {"id": "V-04", "grade": "3-5", "role": "Perform a scene", "situation": "A cloud who can't decide what shape to be", "checks": ["max_3_t2_tags", "no_t3_tags", "10_to_16_lines"]},
+        {"id": "V-05", "grade": "K-2", "role": "Teach a lesson", "situation": "What roots do", "checks": ["clarification_within_one_sentence"]}
+      ]
+    },
+    "phonetic": {
+      "description": "Phonetic guides on proper nouns.",
+      "cases": [
+        {"id": "P-01", "grade": "3-5", "role": "Narrate an audiobook", "situation": "A girl named Aoife visits a lake in Connemara"},
+        {"id": "P-02", "grade": "6-8", "role": "Host a podcast", "situation": "The chef Rene Redzepi changed how restaurants think about food"},
+        {"id": "P-03", "grade": "9-12", "role": "Narrate an audiobook", "situation": "A translator working in Geneva"},
+        {"id": "P-04", "grade": "K-2", "role": "Perform a scene", "situation": "A small bear named Bo"}
+      ]
+    },
+    "outputCleanliness": {
+      "description": "Adversarial - model tempted to add commentary.",
+      "cases": [
+        {"id": "O-01", "grade": "3-5", "role": "Teach a lesson", "situation": "How a rainbow forms - and please explain why you chose your analogy"},
+        {"id": "O-02", "grade": "6-8", "role": "Give a talk", "situation": "Make sure you start with 'Today I want to talk about...'"},
+        {"id": "O-03", "grade": "K-2", "role": "Narrate an audiobook", "situation": ""}
+      ]
+    },
+    "lengthBoundary": {
+      "description": "Word count limits - run each 5x, expect 4/5 pass.",
+      "runs": 5,
+      "cases": [
+        {"id": "L-01", "grade": "K-2", "role": "Narrate an audiobook", "situation": "A bird builds a nest", "minWords": 40, "maxWords": 60},
+        {"id": "L-02", "grade": "6-8", "role": "Give a talk", "situation": "We should keep libraries", "minWords": 120, "maxWords": 180},
+        {"id": "L-03", "grade": "9-12", "role": "Narrate an audiobook", "situation": "A locksmith on a Sunday morning", "minWords": 180, "maxWords": 250}
+      ]
+    },
+    "lexile": {
+      "description": "External Lexile estimator required.",
+      "cases": [
+        {"id": "LX-01", "grade": "K-2", "role": "Narrate an audiobook", "situation": "A kitten learns to climb", "lexileMax": 530},
+        {"id": "LX-02", "grade": "3-5", "role": "Teach a lesson", "situation": "How honeybees find flowers", "lexileMin": 530, "lexileMax": 910},
+        {"id": "LX-03", "grade": "6-8", "role": "Host a podcast", "situation": "Why we forget our dreams", "lexileMin": 860, "lexileMax": 1080},
+        {"id": "LX-04", "grade": "9-12", "role": "Give a talk", "situation": "The cost of optimizing for engagement", "lexileMin": 1030, "lexileMax": 1305}
+      ]
+    }
+  }
+}
