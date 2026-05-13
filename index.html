@@ -285,6 +285,31 @@
   }
   .situation-chip:hover { border-color: var(--indigo-400); background: var(--indigo-50); }
 
+  /* ===== LISTEN SCREEN ===== */
+  .listen-speaker {
+    display: flex; justify-content: center; align-items: center;
+    margin: 24px 0;
+  }
+  .listen-speaker-icon {
+    font-size: 56px;
+    animation: speaker-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes speaker-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.15); opacity: 1; }
+  }
+  .word-now-speaking {
+    background: var(--indigo-100); border-radius: 4px;
+    padding: 1px 3px;
+    color: var(--indigo-700); font-weight: 600;
+  }
+  .word-spoken {
+    color: var(--slate-500);
+  }
+  #listenSkip {
+    margin: 0 auto; display: block;
+  }
+
   /* ===== GENERATING SCREEN ===== */
   .generating-center {
     flex: 1; display: flex; flex-direction: column;
@@ -802,6 +827,47 @@
     </div>
   </div>
 
+  <!-- ===== SCREEN: Get Ready ===== -->
+  <div class="screen" id="screenGetReady">
+    <div class="banner banner-indigo">
+      <h2>Here's your story &#128214;</h2>
+      <p>Tap when you're ready to start.</p>
+    </div>
+    <div class="screen-content">
+      <div class="passage-card">
+        <div class="passage-label">&#128214; Your story:</div>
+        <div class="passage-text" id="getReadyPassageText"></div>
+      </div>
+    </div>
+    <div class="screen-bottom">
+      <button class="btn btn-primary" onclick="goToListen()">Start practicing &#8594;</button>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: Listen ===== -->
+  <div class="screen" id="screenListen">
+    <div class="banner banner-indigo">
+      <h2 id="listenTitle">First, listen carefully &#128064;</h2>
+      <p id="listenSubtitle">I'll read it to you. Follow along.</p>
+    </div>
+    <div class="screen-content">
+      <div class="passage-card">
+        <div class="passage-label">&#128266; Listening...</div>
+        <div class="passage-text" id="listenPassageText"></div>
+      </div>
+      <div class="listen-speaker" id="listenSpeaker">
+        <div class="listen-speaker-icon">&#128266;</div>
+      </div>
+      <button class="btn-link" id="listenSkip" onclick="skipListen()">Skip listening &#8594;</button>
+    </div>
+    <div class="action-area hidden" id="listenAction">
+      <button class="mic-btn mic-btn-green" onclick="goToPracticeRead()">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 12h14M12 5l7 7-7 7" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="action-label action-label-green">Now you try!</div>
+    </div>
+  </div>
+
   <!-- ===== SCREEN 2: Reading ===== -->
   <div class="screen" id="screenReading">
     <div class="banner banner-indigo">
@@ -850,6 +916,7 @@
     </div>
     <div class="screen-bottom hidden" id="resultsButtons">
       <div class="btn-row">
+        <button class="btn btn-outline hidden" id="btnReadAgain" onclick="readAgain()">Read it again &#128257;</button>
         <button class="btn btn-primary hidden" id="btnHotRead" onclick="startHotRead()">Time to shine! &#127775;</button>
         <button class="btn btn-green hidden" id="btnPracticeNew" onclick="goToPractice()">Practice new words</button>
         <button class="btn btn-outline hidden" id="btnNewText" onclick="tryNewText()">Try a new text &#8594;</button>
@@ -996,7 +1063,10 @@ let currentText = '';
 let currentTaggedWords = []; // [{word, tier: 2|3, phonetic?: string}]
 let currentPhoneticGuides = {}; // { word: 'pho-NEH-tik' }
 let readingStartTime = null;
-let sessionState = { phase: 'cold', cold: null, hot: null };
+let sessionState = { phase: 'practice', practice: null, hot: null, practiceReads: 0 };
+// `phase`: 'practice' = trial reads with feedback (looped), 'hot' = final "time to shine" read.
+// `practice` / `hot` store {wpm, wordsHeard, totalWords, elapsedMs, scores} for each phase.
+// `practiceReads` increments each time the user re-reads the passage.
 let sentences = [];
 let recognizer = null;
 let isReading = false;
@@ -1028,6 +1098,7 @@ function showScreen(id) {
 }
 
 function goBack() {
+  if (typeof stopNarration === 'function') stopNarration();
   if (screenHistory.length > 0) {
     const prev = screenHistory.pop();
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -1037,6 +1108,7 @@ function goBack() {
 
 function closeApp() {
   if (recognizer) stopRecording();
+  if (typeof stopNarration === 'function') stopNarration();
   screenHistory = [];
   onboardStep = 0;
   updateOnboardSlide();
@@ -1139,9 +1211,8 @@ async function goToGenerate() {
     applyPassage(passage);
     attemptCount = 0;
     previousScores = null;
-    sessionState = { phase: 'cold', cold: null, hot: null };
-    showScreen('screenReading');
-    resetReadingUI();
+    sessionState = { phase: 'practice', practice: null, hot: null, practiceReads: 0 };
+    showGetReady();
   } catch (err) {
     console.error('Gemini error:', err);
     const errEl = document.getElementById('generatingError');
@@ -1214,6 +1285,143 @@ function applyPassage(parsed) {
   sentences = currentText.match(/[^.!?\n]+[.!?]+|\S[^\n]*/g)?.map(s => s.trim()).filter(Boolean) || [currentText];
 }
 
+function showGetReady() {
+  document.getElementById('getReadyPassageText').innerHTML = currentText;
+  showScreen('screenGetReady');
+}
+
+function goToListen() {
+  // Reset listen UI: passage rendered as spans for word-level highlight in Phase 2.
+  document.getElementById('listenAction').classList.add('hidden');
+  document.getElementById('listenSkip').classList.remove('hidden');
+  renderListenPassage();
+  showScreen('screenListen');
+  startNarration();
+}
+
+function renderListenPassage() {
+  // Wrap each word in a span so we can highlight as the AI reads.
+  const el = document.getElementById('listenPassageText');
+  const words = currentText.split(/(\s+)/); // keep whitespace as separators
+  el.innerHTML = words.map((w, i) =>
+    /\S/.test(w) ? '<span class="listen-word" data-i="' + i + '">' + w + '</span>' : w
+  ).join('');
+}
+
+// ===== TTS NARRATION (Listen step) =====
+let narrationState = { active: false, sentenceIdx: 0, sentenceStarts: [] };
+
+function pickNarrationVoice() {
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return null;
+  // Prefer a US English female voice; fall back to any en-US, then any English, then default.
+  const enUS = voices.filter(v => /en[-_]US/i.test(v.lang));
+  const female = enUS.find(v => /female|samantha|google us english|joanna|salli|ava/i.test(v.name));
+  return female || enUS[0] || voices.find(v => /^en/i.test(v.lang)) || voices[0];
+}
+
+function whenVoicesReady(cb) {
+  if (window.speechSynthesis.getVoices().length) { cb(); return; }
+  // Some browsers populate voices asynchronously.
+  const handler = () => { window.speechSynthesis.removeEventListener('voiceschanged', handler); cb(); };
+  window.speechSynthesis.addEventListener('voiceschanged', handler);
+  // Safety fallback in case the event never fires.
+  setTimeout(cb, 600);
+}
+
+function startNarration() {
+  if (!('speechSynthesis' in window)) {
+    // No TTS available — reveal the "Now you try" button immediately.
+    document.getElementById('listenAction').classList.remove('hidden');
+    return;
+  }
+  window.speechSynthesis.cancel();
+
+  // Precompute, per sentence, the absolute word offset into the passage for highlighting.
+  const allWords = currentText.match(/\S+/g) || [];
+  let wordOffset = 0;
+  narrationState.sentenceStarts = sentences.map(s => {
+    const start = wordOffset;
+    wordOffset += (s.match(/\S+/g) || []).length;
+    return start;
+  });
+  narrationState.active = true;
+  narrationState.sentenceIdx = 0;
+
+  whenVoicesReady(() => {
+    if (!narrationState.active) return; // user skipped before voices loaded
+    speakSentence(0);
+  });
+}
+
+function speakSentence(idx) {
+  if (!narrationState.active) return;
+  if (idx >= sentences.length) {
+    narrationState.active = false;
+    highlightUpTo(currentText.match(/\S+/g)?.length || 0);
+    document.getElementById('listenAction').classList.remove('hidden');
+    return;
+  }
+  narrationState.sentenceIdx = idx;
+  const utter = new SpeechSynthesisUtterance(sentences[idx]);
+  const voice = pickNarrationVoice();
+  if (voice) utter.voice = voice;
+  utter.rate = 0.8;   // slow, kid-friendly
+  utter.pitch = 1.05;
+  utter.lang = 'en-US';
+
+  utter.onboundary = (e) => {
+    if (e.name && e.name !== 'word') return;
+    // charIndex is into the current sentence. Count whitespace-separated tokens up to it.
+    const preface = sentences[idx].slice(0, e.charIndex);
+    const wordsInPreface = (preface.match(/\S+/g) || []).length;
+    const absoluteWord = narrationState.sentenceStarts[idx] + wordsInPreface;
+    highlightWord(absoluteWord);
+  };
+  utter.onend = () => speakSentence(idx + 1);
+  utter.onerror = () => speakSentence(idx + 1);
+
+  window.speechSynthesis.speak(utter);
+}
+
+function highlightWord(absoluteIdx) {
+  const spans = document.querySelectorAll('#listenPassageText .listen-word');
+  spans.forEach((s, i) => {
+    s.classList.remove('word-now-speaking');
+    if (i < absoluteIdx) s.classList.add('word-spoken');
+    else s.classList.remove('word-spoken');
+  });
+  const current = spans[absoluteIdx];
+  if (current) {
+    current.classList.add('word-now-speaking');
+    current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function highlightUpTo(n) {
+  const spans = document.querySelectorAll('#listenPassageText .listen-word');
+  spans.forEach((s, i) => {
+    s.classList.remove('word-now-speaking');
+    s.classList.toggle('word-spoken', i < n);
+  });
+}
+
+function skipListen() {
+  stopNarration();
+  goToPracticeRead();
+}
+
+function stopNarration() {
+  narrationState.active = false;
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+}
+
+function goToPracticeRead() {
+  stopNarration();
+  showScreen('screenReading');
+  resetReadingUI();
+}
+
 // Static fallback — used by tryNewText if Gemini isn't reachable.
 function pickPassage() {
   const passages = PASSAGES[currentLevel] || PASSAGES['3-5'];
@@ -1223,8 +1431,8 @@ function pickPassage() {
 
 function resetReadingUI() {
   document.getElementById('readingTitle').innerHTML = sessionState.phase === 'hot'
-    ? "Time to shine! &#127775;<br>Read the same passage again."
-    : "Meet the story &#128075;<br>Read the passage out loud.";
+    ? "Time to shine! &#127775;<br>Read the passage one more time."
+    : "Your turn &#128075;<br>Read it out loud.";
   document.getElementById('passageText').innerHTML = currentText;
   document.getElementById('btnMic').className = 'mic-btn mic-btn-record';
   document.getElementById('btnMic').innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
@@ -1419,20 +1627,23 @@ function showResults() {
   const totalWords = (currentText.match(/\b\w+\b/g) || []).length;
   const wpm = elapsedMs > 0 ? Math.round((wordsHeard / elapsedMs) * 60000) : 0;
   sessionState[sessionState.phase] = { wpm, wordsHeard, totalWords, elapsedMs, scores };
+  if (sessionState.phase === 'practice') sessionState.practiceReads++;
 
   const isReAttempt = previousScores != null;
-  const isCold = sessionState.phase === 'cold';
-  const coldWpmForDelta = sessionState.cold?.wpm;
-  const wpmDelta = (!isCold && coldWpmForDelta != null) ? wpm - coldWpmForDelta : null;
+  const isPractice = sessionState.phase === 'practice';
+  const practiceWpmForDelta = sessionState.practice?.wpm;
+  const wpmDelta = (!isPractice && practiceWpmForDelta != null) ? wpm - practiceWpmForDelta : null;
 
   // Banner
   let bannerText;
-  if (isCold) {
-    bannerText = 'Cold read done! Your results:';
+  if (isPractice) {
+    bannerText = (sessionState.practiceReads > 1)
+      ? 'Even better! Your practice read:'
+      : 'Nice work! Here is your practice read:';
   } else if (wpmDelta != null) {
     const arrow = wpmDelta > 0 ? '↑' : wpmDelta < 0 ? '↓' : '→';
     const sign = wpmDelta > 0 ? '+' : '';
-    bannerText = `You shone! ${coldWpmForDelta} → ${wpm} WPM ${arrow} (${sign}${wpmDelta})`;
+    bannerText = `You shone! ${practiceWpmForDelta} → ${wpm} WPM ${arrow} (${sign}${wpmDelta})`;
   } else if (isReAttempt) {
     bannerText = 'Getting better! Your results:';
   } else {
@@ -1450,8 +1661,8 @@ function showResults() {
 
   // Score cards
   const scoresRow = document.getElementById('scoresRow');
-  const coldWpm = sessionState.cold?.wpm;
-  const wpmWas = !isCold && coldWpm != null ? '<div class="score-was">cold: ' + coldWpm + '</div>' : '';
+  const practiceWpm = sessionState.practice?.wpm;
+  const wpmWas = !isPractice && practiceWpm != null ? '<div class="score-was">practice: ' + practiceWpm + '</div>' : '';
   const wpmCard = '<div class="score-card"><div class="score-value score-value-indigo">' + wpm + '</div><div class="score-label">WPM</div>' + wpmWas + '</div>';
   const wordsCard = '<div class="score-card"><div class="score-value score-value-indigo">' + wordsHeard + '</div><div class="score-label">words read</div></div>';
   scoresRow.innerHTML = wpmCard + wordsCard + [
@@ -1544,17 +1755,19 @@ function showResults() {
   const btnPracticeNew = document.getElementById('btnPracticeNew');
   const btnNewText = document.getElementById('btnNewText');
 
-  if (isCold) {
-    // After cold read, focus the user on the hot read.
+  if (isPractice) {
+    // After a practice read, offer "Read it again" (loop) and "Time to shine" (advance).
     resultsAction.classList.add('hidden');
     resultsButtons.classList.remove('hidden');
+    document.getElementById('btnReadAgain').classList.remove('hidden');
     btnHotRead.classList.remove('hidden');
     btnPracticeNew.classList.add('hidden');
     btnNewText.classList.add('hidden');
   } else {
-    // After hot read, surface "Try a new text" with optional practice.
+    // After hot read, surface "Try a new text" with optional word practice.
     resultsAction.classList.add('hidden');
     resultsButtons.classList.remove('hidden');
+    document.getElementById('btnReadAgain').classList.add('hidden');
     btnHotRead.classList.add('hidden');
     btnPracticeNew.classList.toggle('hidden', practiceWords.length === 0);
     btnNewText.classList.remove('hidden');
@@ -1570,6 +1783,14 @@ function startHotRead() {
   previousScores = null;
   showScreen('screenReading');
   resetReadingUI();
+}
+
+// Loop the practice phase: replay the AI narration, then mic again.
+function readAgain() {
+  sessionState.phase = 'practice';
+  attemptCount = 0;
+  previousScores = null;
+  goToListen();
 }
 
 // ===== WORD PRACTICE =====
