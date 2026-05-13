@@ -306,6 +306,38 @@
   .voice-card-desc { font-size: 12px; color: var(--slate-500); }
   .voice-card.selected .voice-card-name { color: var(--indigo-700); }
 
+  /* ===== SPEED SLIDER ===== */
+  .setting-block {
+    width: 100%; max-width: 420px; margin: 28px auto 0;
+  }
+  .setting-label {
+    font-size: 14px; font-weight: 600; color: var(--slate-700);
+    margin-bottom: 12px;
+  }
+  .speed-row {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .speed-icon { font-size: 26px; line-height: 1; }
+  .speed-slider {
+    flex: 1; height: 6px;
+    -webkit-appearance: none; appearance: none;
+    background: var(--slate-200); border-radius: 999px;
+    outline: none; cursor: pointer;
+  }
+  .speed-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 22px; height: 22px;
+    background: var(--indigo-500); border-radius: 50%;
+    cursor: pointer; border: 3px solid white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  .speed-slider::-moz-range-thumb {
+    width: 22px; height: 22px;
+    background: var(--indigo-500); border-radius: 50%;
+    cursor: pointer; border: 3px solid white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+
   /* ===== LISTEN SCREEN ===== */
   .listen-controls {
     display: flex; justify-content: center; margin: 20px 0;
@@ -878,6 +910,14 @@
     </div>
     <div class="screen-content">
       <div class="voice-grid" id="voicePickerGrid"></div>
+      <div class="setting-block">
+        <div class="setting-label">Reading speed</div>
+        <div class="speed-row">
+          <span class="speed-icon" aria-label="slow">&#128034;</span>
+          <input type="range" class="speed-slider" id="speedSlider" min="0" max="100" value="50" oninput="setSpeed(this.value)">
+          <span class="speed-icon" aria-label="fast">&#128007;</span>
+        </div>
+      </div>
     </div>
     <div class="screen-bottom">
       <button class="btn btn-primary" id="btnStartListen" onclick="goToListen()">Start listening &#8594;</button>
@@ -1142,6 +1182,7 @@ function showScreen(id) {
 
 function goBack() {
   if (typeof stopNarration === 'function') stopNarration();
+  if (typeof stopPreview === 'function') stopPreview();
   if (screenHistory.length > 0) {
     const prev = screenHistory.pop();
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -1152,6 +1193,7 @@ function goBack() {
 function closeApp() {
   if (recognizer) stopRecording();
   if (typeof stopNarration === 'function') stopNarration();
+  if (typeof stopPreview === 'function') stopPreview();
   screenHistory = [];
   onboardStep = 0;
   updateOnboardSlide();
@@ -1335,10 +1377,13 @@ function showGetReady() {
 
 function goToVoicePick() {
   renderVoicePicker();
+  const slider = document.getElementById('speedSlider');
+  if (slider) slider.value = currentSpeed;
   showScreen('screenVoicePick');
 }
 
 function goToListen() {
+  stopPreview(); // any in-flight voice sample
   document.getElementById('listenAction').classList.add('hidden');
   document.getElementById('listenSkip').classList.remove('hidden');
   document.getElementById('listenStatus').textContent = 'Getting your story ready...';
@@ -1364,9 +1409,27 @@ const READERLY_VOICES = [
   { id: 'en-US-JennyNeural', emoji: '🐰', name: 'Jenny', desc: 'Bright + clear', style: 'cheerful' },
   { id: 'en-US-AnaNeural',   emoji: '🐥', name: 'Ana',   desc: 'Kid voice',      style: null }
 ];
-const VOICE_RATE = '-15%'; // slow, kid-friendly
+// Slider 0-100 → SSML rate. 50 ≈ -15% (default, kid-friendly slow).
+// Turtle (0) ≈ -50%, Rabbit (100) ≈ +20%.
 let currentVoiceId = localStorage.getItem('readerly_voice') || 'en-US-AriaNeural';
+let currentSpeed = parseInt(localStorage.getItem('readerly_speed') || '50', 10);
 let narrationState = { active: false, runId: 0, synthesizer: null, audio: null, audioUrl: null, wordEvents: [] };
+
+function speedToSsmlRate(slider) {
+  // Map 0..100 → -50%..+20%, with 50 → -15% (current default feel).
+  // Use a piecewise so the midpoint stays at a comfortable slow rate.
+  const v = Math.max(0, Math.min(100, slider));
+  const pct = v <= 50
+    ? -50 + (v / 50) * 35   // 0 → -50%, 50 → -15%
+    : -15 + ((v - 50) / 50) * 35; // 50 → -15%, 100 → +20%
+  const rounded = Math.round(pct);
+  return (rounded >= 0 ? '+' : '') + rounded + '%';
+}
+
+function setSpeed(value) {
+  currentSpeed = parseInt(value, 10);
+  localStorage.setItem('readerly_speed', String(currentSpeed));
+}
 
 function getVoice(id) {
   return READERLY_VOICES.find(v => v.id === id) || READERLY_VOICES[0];
@@ -1383,6 +1446,7 @@ function escapeForSsml(text) {
 
 function buildSsml(text, voice) {
   const safe = escapeForSsml(text);
+  const rate = speedToSsmlRate(currentSpeed);
   const styleOpen  = voice.style ? `<mstts:express-as style="${voice.style}">` : '';
   const styleClose = voice.style ? `</mstts:express-as>` : '';
   return [
@@ -1390,7 +1454,7 @@ function buildSsml(text, voice) {
     ' xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="en-US">',
     `<voice name="${voice.id}">`,
       styleOpen,
-        `<prosody rate="${VOICE_RATE}">${safe}</prosody>`,
+        `<prosody rate="${rate}">${safe}</prosody>`,
       styleClose,
     '</voice>',
     '</speak>'
@@ -1411,10 +1475,86 @@ function renderVoicePicker() {
 }
 
 function setVoice(id) {
-  if (id === currentVoiceId) return;
   currentVoiceId = id;
   localStorage.setItem('readerly_voice', id);
   renderVoicePicker();
+  // Always re-preview, even if the same voice was tapped — kids re-tap to hear again.
+  previewVoice(id);
+}
+
+// ===== VOICE PREVIEW (Voice Pick screen) =====
+// Short audible sample of the selected voice. Independent of the main
+// narration state so the two never collide.
+let previewState = { runId: 0, audio: null, audioUrl: null, synthesizer: null };
+
+function stopPreview() {
+  previewState.runId++;
+  if (previewState.audio) {
+    try {
+      previewState.audio.pause();
+      previewState.audio.src = '';
+      previewState.audio.load();
+    } catch (e) {}
+    previewState.audio = null;
+  }
+  if (previewState.audioUrl) {
+    try { URL.revokeObjectURL(previewState.audioUrl); } catch (e) {}
+    previewState.audioUrl = null;
+  }
+  if (previewState.synthesizer) {
+    try { previewState.synthesizer.close(); } catch (e) {}
+    previewState.synthesizer = null;
+  }
+}
+
+function previewVoice(voiceId) {
+  if (!window.SpeechSDK) return;
+  stopPreview();
+
+  const voice = getVoice(voiceId);
+  previewState.runId++;
+  const myRun = previewState.runId;
+
+  const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
+  speechConfig.speechSynthesisVoiceName = voice.id;
+  speechConfig.speechSynthesisOutputFormat =
+    SpeechSDK.SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
+
+  const sinkStream = SpeechSDK.PullAudioOutputStream.create();
+  const audioConfig = SpeechSDK.AudioConfig.fromStreamOutput(sinkStream);
+  const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
+  previewState.synthesizer = synthesizer;
+
+  const rate = speedToSsmlRate(currentSpeed);
+  const sample = `Hi! I'm ${voice.name}.`;
+  const styleOpen  = voice.style ? `<mstts:express-as style="${voice.style}">` : '';
+  const styleClose = voice.style ? `</mstts:express-as>` : '';
+  const ssml = [
+    '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis"',
+    ' xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="en-US">',
+    `<voice name="${voice.id}">`, styleOpen,
+      `<prosody rate="${rate}">${sample}</prosody>`,
+    styleClose, '</voice></speak>'
+  ].join('');
+
+  synthesizer.speakSsmlAsync(
+    ssml,
+    (result) => {
+      try { synthesizer.close(); } catch (_) {}
+      if (myRun !== previewState.runId) return;
+      if (result.reason !== SpeechSDK.ResultReason.SynthesizingAudioCompleted) return;
+      const blob = new Blob([result.audioData], { type: 'audio/wav' });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      previewState.audio = audio;
+      previewState.audioUrl = url;
+      audio.play().catch(err => console.error('Preview play failed:', err));
+    },
+    (err) => {
+      try { synthesizer.close(); } catch (_) {}
+      console.error('Preview synthesis failed:', err);
+    }
+  );
 }
 
 // Synthesizes the whole passage to an MP3 buffer, then plays through an HTML5
@@ -1440,8 +1580,13 @@ function startNarration() {
   const voice = getVoice(currentVoiceId);
   const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
   speechConfig.speechSynthesisVoiceName = voice.id;
+  // RIFF/PCM (WAV) instead of MP3. MP3 has ~70ms encoder priming silence at the
+  // start that audio.currentTime counts but Azure's audioOffset doesn't, which
+  // was pushing the word highlight ~1 word ahead of the speech. PCM has zero
+  // encoder delay → frame-accurate sync. File is bigger but our passages are
+  // short (≤15s) so it's still small.
   speechConfig.speechSynthesisOutputFormat =
-    SpeechSDK.SpeechSynthesisOutputFormat.Audio16Khz64KBitRateMonoMp3;
+    SpeechSDK.SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
 
   // CRITICAL: never let Azure play to the default speaker. With no audioConfig
   // (or null), the SDK auto-plays through an internal speaker buffer that
@@ -1488,7 +1633,7 @@ function startNarration() {
 
 function playSynthBuffer(audioData, myRun) {
   if (myRun !== narrationState.runId) return;
-  const blob = new Blob([audioData], { type: 'audio/mpeg' });
+  const blob = new Blob([audioData], { type: 'audio/wav' });
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
   narrationState.audio = audio;
