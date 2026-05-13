@@ -1,0 +1,15 @@
+# Generated at container start by entrypoint.sh from env vars.
+# Never commit this — it contains live API keys at runtime.
+config.js
+
+# Local dev override (copy config.example.js to config.local.js and fill in
+# your dev keys). The entrypoint won't overwrite config.local.js.
+config.local.js
+
+# Python venv (test runner)
+prompt-tests/.venv/
+prompt-tests/__pycache__/
+prompt-tests/results.md
+
+# OS
+.DS_Store

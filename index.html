@@ -6,6 +6,7 @@
 <title>Readerly — AI Reading Tutor</title>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
+<script src="config.js"></script>
 <script src="prompt.js"></script>
 <style>
   :root {
@@ -923,11 +924,16 @@
 
 <script>
 // ===== CONFIG =====
-const AZURE_KEY = 'REDACTED_AZURE_KEY';
-const AZURE_REGION = 'eastus';
-// TODO: move Gemini calls to a backend so this key doesn't ship in the client.
-const GEMINI_API_KEY = 'REDACTED_GEMINI_KEY';
-const GEMINI_MODEL = 'gemini-2.5-flash';
+// Loaded from config.js, which is generated at container start by entrypoint.sh
+// from runtime env vars. Never inlined here so secrets don't ship in source.
+// For local dev: copy config.example.js -> config.js and fill in your keys.
+if (!window.READERLY_CONFIG) {
+  console.error('Missing config.js. In prod this is generated at container start; in local dev, copy config.example.js to config.js.');
+}
+const AZURE_KEY = (window.READERLY_CONFIG || {}).AZURE_KEY || '';
+const AZURE_REGION = (window.READERLY_CONFIG || {}).AZURE_REGION || 'eastus';
+const GEMINI_API_KEY = (window.READERLY_CONFIG || {}).GEMINI_API_KEY || '';
+const GEMINI_MODEL = (window.READERLY_CONFIG || {}).GEMINI_MODEL || 'gemini-2.5-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 // ===== PASSAGES (fallback during Phase 1 — Phase 2 replaces with Gemini) =====
