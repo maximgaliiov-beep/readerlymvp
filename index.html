@@ -286,6 +286,25 @@
   .situation-chip:hover { border-color: var(--indigo-400); background: var(--indigo-50); }
 
   /* ===== LISTEN SCREEN ===== */
+  .voice-picker {
+    display: flex; gap: 8px; justify-content: center;
+    flex-wrap: wrap; margin: 0 auto 16px; max-width: 480px;
+  }
+  .voice-chip {
+    flex: 1 1 0; min-width: 80px; max-width: 110px;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; padding: 10px 8px;
+    background: var(--white); border: 2px solid var(--slate-200);
+    border-radius: 12px; cursor: pointer; transition: all 0.2s;
+    font-family: 'Rubik', sans-serif;
+  }
+  .voice-chip:hover { border-color: var(--indigo-400); background: var(--indigo-50); }
+  .voice-chip.selected {
+    border-color: var(--indigo-500); background: var(--indigo-50);
+  }
+  .voice-emoji { font-size: 28px; line-height: 1; }
+  .voice-name { font-size: 13px; font-weight: 600; color: var(--slate-700); }
+  .voice-chip.selected .voice-name { color: var(--indigo-700); }
   .listen-speaker {
     display: flex; justify-content: center; align-items: center;
     margin: 24px 0;
@@ -848,9 +867,10 @@
   <div class="screen" id="screenListen">
     <div class="banner banner-indigo">
       <h2 id="listenTitle">First, listen carefully &#128064;</h2>
-      <p id="listenSubtitle">I'll read it to you. Follow along.</p>
+      <p id="listenSubtitle">Pick a buddy to read to you, then follow along.</p>
     </div>
     <div class="screen-content">
+      <div class="voice-picker" id="voicePicker"></div>
       <div class="passage-card">
         <div class="passage-label">&#128266; Listening...</div>
         <div class="passage-text" id="listenPassageText"></div>
@@ -1291,10 +1311,10 @@ function showGetReady() {
 }
 
 function goToListen() {
-  // Reset listen UI: passage rendered as spans for word-level highlight in Phase 2.
   document.getElementById('listenAction').classList.add('hidden');
   document.getElementById('listenSkip').classList.remove('hidden');
   renderListenPassage();
+  renderVoicePicker();
   showScreen('screenListen');
   startNarration();
 }
@@ -1308,80 +1328,120 @@ function renderListenPassage() {
   ).join('');
 }
 
-// ===== TTS NARRATION (Listen step) =====
-let narrationState = { active: false, sentenceIdx: 0, sentenceStarts: [] };
+// ===== TTS NARRATION (Listen step, Azure Neural TTS) =====
+const READERLY_VOICES = [
+  { id: 'en-US-AriaNeural',  emoji: '🦊', name: 'Aria',  desc: 'Warm teacher',   style: 'friendly' },
+  { id: 'en-US-DavisNeural', emoji: '🐻', name: 'Davis', desc: 'Friendly guide', style: 'friendly' },
+  { id: 'en-US-JennyNeural', emoji: '🐰', name: 'Jenny', desc: 'Bright + clear', style: 'cheerful' },
+  { id: 'en-US-AnaNeural',   emoji: '🐥', name: 'Ana',   desc: 'Kid voice',      style: null }
+];
+const VOICE_RATE = '-15%'; // slow, kid-friendly
+let currentVoiceId = localStorage.getItem('readerly_voice') || 'en-US-AriaNeural';
+let narrationState = { active: false, runId: 0, synthesizer: null };
 
-function pickNarrationVoice() {
-  const voices = window.speechSynthesis.getVoices();
-  if (!voices.length) return null;
-  // Prefer a US English female voice; fall back to any en-US, then any English, then default.
-  const enUS = voices.filter(v => /en[-_]US/i.test(v.lang));
-  const female = enUS.find(v => /female|samantha|google us english|joanna|salli|ava/i.test(v.name));
-  return female || enUS[0] || voices.find(v => /^en/i.test(v.lang)) || voices[0];
+function getVoice(id) {
+  return READERLY_VOICES.find(v => v.id === id) || READERLY_VOICES[0];
 }
 
-function whenVoicesReady(cb) {
-  if (window.speechSynthesis.getVoices().length) { cb(); return; }
-  // Some browsers populate voices asynchronously.
-  const handler = () => { window.speechSynthesis.removeEventListener('voiceschanged', handler); cb(); };
-  window.speechSynthesis.addEventListener('voiceschanged', handler);
-  // Safety fallback in case the event never fires.
-  setTimeout(cb, 600);
+function escapeForSsml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function buildSsml(text, voice) {
+  const safe = escapeForSsml(text);
+  const styleOpen  = voice.style ? `<mstts:express-as style="${voice.style}">` : '';
+  const styleClose = voice.style ? `</mstts:express-as>` : '';
+  return [
+    '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis"',
+    ' xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="en-US">',
+    `<voice name="${voice.id}">`,
+      styleOpen,
+        `<prosody rate="${VOICE_RATE}">${safe}</prosody>`,
+      styleClose,
+    '</voice>',
+    '</speak>'
+  ].join('');
+}
+
+function renderVoicePicker() {
+  const row = document.getElementById('voicePicker');
+  if (!row) return;
+  row.innerHTML = READERLY_VOICES.map(v =>
+    '<button class="voice-chip' + (v.id === currentVoiceId ? ' selected' : '') +
+    '" data-voice="' + v.id + '" onclick="setVoice(\'' + v.id + '\')">' +
+      '<span class="voice-emoji">' + v.emoji + '</span>' +
+      '<span class="voice-name">' + v.name + '</span>' +
+    '</button>'
+  ).join('');
+}
+
+function setVoice(id) {
+  if (id === currentVoiceId) return;
+  currentVoiceId = id;
+  localStorage.setItem('readerly_voice', id);
+  renderVoicePicker();
+  // If we're mid-narration, restart with the new voice.
+  if (narrationState.active) startNarration();
 }
 
 function startNarration() {
-  if (!('speechSynthesis' in window)) {
-    // No TTS available — reveal the "Now you try" button immediately.
+  stopNarration(); // cancel any in-flight synth before starting new one
+
+  if (!window.SpeechSDK) {
+    // SDK didn't load — gracefully skip listen step.
     document.getElementById('listenAction').classList.remove('hidden');
     return;
   }
-  window.speechSynthesis.cancel();
 
-  // Precompute, per sentence, the absolute word offset into the passage for highlighting.
-  const allWords = currentText.match(/\S+/g) || [];
-  let wordOffset = 0;
-  narrationState.sentenceStarts = sentences.map(s => {
-    const start = wordOffset;
-    wordOffset += (s.match(/\S+/g) || []).length;
-    return start;
-  });
+  narrationState.runId++;
+  const myRun = narrationState.runId;
   narrationState.active = true;
-  narrationState.sentenceIdx = 0;
+  document.getElementById('listenAction').classList.add('hidden');
 
-  whenVoicesReady(() => {
-    if (!narrationState.active) return; // user skipped before voices loaded
-    speakSentence(0);
-  });
+  const voice = getVoice(currentVoiceId);
+  const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
+  speechConfig.speechSynthesisVoiceName = voice.id;
+  const audioConfig = SpeechSDK.AudioConfig.fromDefaultSpeakerOutput();
+  const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
+  narrationState.synthesizer = synthesizer;
+
+  // wordBoundary fires for each spoken word, with textOffset into the SSML.
+  // We strip SSML tags so the offset lands inside the prosody-wrapped text.
+  // Since we wrap the whole passage in one prosody block, offsets are stable.
+  const ssmlPrefixLen = buildSsml('', voice).indexOf('</prosody>'); // length up to text start
+  synthesizer.wordBoundary = (s, e) => {
+    if (myRun !== narrationState.runId) return;
+    const textStartInSsml = ssmlPrefixLen;
+    const offsetInText = e.textOffset - textStartInSsml;
+    highlightAtOffset(offsetInText);
+  };
+  synthesizer.synthesisCompleted = () => {
+    if (myRun !== narrationState.runId) return;
+    finishNarration();
+  };
+
+  const ssml = buildSsml(currentText, voice);
+  synthesizer.speakSsmlAsync(
+    ssml,
+    () => { /* success — onSynthesisCompleted handles UI */ },
+    (err) => {
+      console.error('Azure TTS error:', err);
+      if (myRun === narrationState.runId) finishNarration();
+    }
+  );
 }
 
-function speakSentence(idx) {
-  if (!narrationState.active) return;
-  if (idx >= sentences.length) {
-    narrationState.active = false;
-    highlightUpTo(currentText.match(/\S+/g)?.length || 0);
-    document.getElementById('listenAction').classList.remove('hidden');
-    return;
-  }
-  narrationState.sentenceIdx = idx;
-  const utter = new SpeechSynthesisUtterance(sentences[idx]);
-  const voice = pickNarrationVoice();
-  if (voice) utter.voice = voice;
-  utter.rate = 0.8;   // slow, kid-friendly
-  utter.pitch = 1.05;
-  utter.lang = 'en-US';
-
-  utter.onboundary = (e) => {
-    if (e.name && e.name !== 'word') return;
-    // charIndex is into the current sentence. Count whitespace-separated tokens up to it.
-    const preface = sentences[idx].slice(0, e.charIndex);
-    const wordsInPreface = (preface.match(/\S+/g) || []).length;
-    const absoluteWord = narrationState.sentenceStarts[idx] + wordsInPreface;
-    highlightWord(absoluteWord);
-  };
-  utter.onend = () => speakSentence(idx + 1);
-  utter.onerror = () => speakSentence(idx + 1);
-
-  window.speechSynthesis.speak(utter);
+function highlightAtOffset(textOffset) {
+  // textOffset is into the (decoded) passage text. Count whitespace-separated tokens up to it.
+  const safe = Math.max(0, Math.min(textOffset, currentText.length));
+  const preface = currentText.slice(0, safe);
+  const wordIdx = (preface.match(/\S+/g) || []).length;
+  highlightWord(wordIdx);
 }
 
 function highlightWord(absoluteIdx) {
@@ -1406,6 +1466,12 @@ function highlightUpTo(n) {
   });
 }
 
+function finishNarration() {
+  narrationState.active = false;
+  highlightUpTo((currentText.match(/\S+/g) || []).length);
+  document.getElementById('listenAction').classList.remove('hidden');
+}
+
 function skipListen() {
   stopNarration();
   goToPracticeRead();
@@ -1413,7 +1479,11 @@ function skipListen() {
 
 function stopNarration() {
   narrationState.active = false;
-  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  narrationState.runId++; // invalidates any in-flight callbacks
+  if (narrationState.synthesizer) {
+    try { narrationState.synthesizer.close(); } catch (e) {}
+    narrationState.synthesizer = null;
+  }
 }
 
 function goToPracticeRead() {
