@@ -1443,8 +1443,13 @@ function startNarration() {
   speechConfig.speechSynthesisOutputFormat =
     SpeechSDK.SpeechSynthesisOutputFormat.Audio16Khz64KBitRateMonoMp3;
 
-  // No AudioConfig — synthesize to result.audioData buffer only, no auto-play.
-  const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, undefined);
+  // CRITICAL: never let Azure play to the default speaker. With no audioConfig
+  // (or null), the SDK auto-plays through an internal speaker buffer that
+  // survives synthesizer.close(). That caused echo (Azure + our <audio>) and
+  // made pause useless. Route to a sink stream we never read.
+  const sinkStream = SpeechSDK.PullAudioOutputStream.create();
+  const audioConfig = SpeechSDK.AudioConfig.fromStreamOutput(sinkStream);
+  const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
   narrationState.synthesizer = synthesizer;
 
   // wordBoundary fires during synthesis. textOffset is into the SSML string.
