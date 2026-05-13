@@ -10,12 +10,22 @@
 <script src="prompt.js"></script>
 <style>
   :root {
+    /* Brand — borrowed from Brighty / homework help for cross-product consistency */
+    --primary: #755dfc;
+    --primary-hover: #6249f0;
+    --primary-pressed: #5a3fda;
+    --brighty-yellow: #ffd230;
+    --brighty-yellow-soft: #fef9c3;
+    --hero-radius: 24px;
+    --shadow-cta: 0 6px 16px rgba(108, 92, 231, 0.32);
+    --shadow-card: 0 2px 8px rgba(28, 44, 120, 0.06);
+
     --indigo-50: #EEF2FF;
     --indigo-100: #E0E7FF;
     --indigo-400: #818CF8;
-    --indigo-500: #6366F1;
-    --indigo-600: #4F46E5;
-    --indigo-700: #4338CA;
+    --indigo-500: #755dfc;  /* aliased to new primary so existing classes pick it up */
+    --indigo-600: #6249f0;
+    --indigo-700: #5a3fda;
     --slate-50: #F8FAFC;
     --slate-100: #F1F5F9;
     --slate-200: #E2E8F0;
@@ -66,6 +76,49 @@
     margin: 0 auto;
   }
 
+  /* ===== CONFETTI ===== */
+  .confetti-layer {
+    position: fixed; inset: 0; pointer-events: none; z-index: 999;
+    overflow: hidden;
+  }
+  .confetti-piece {
+    position: absolute; width: 8px; height: 14px;
+    top: -20px; opacity: 0;
+    animation: confetti-fall 2.4s ease-out forwards;
+  }
+  @keyframes confetti-fall {
+    0% { transform: translateY(0) rotate(0); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* ===== BRIGHTY MASCOT ===== */
+  .brighty {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--brighty-yellow); border-radius: 50%;
+    flex-shrink: 0; user-select: none; line-height: 1;
+    box-shadow: 0 4px 12px rgba(255, 210, 48, 0.35);
+  }
+  .brighty--sm { width: 28px;  height: 28px;  font-size: 16px; }
+  .brighty--md { width: 44px;  height: 44px;  font-size: 24px; }
+  .brighty--lg { width: 84px;  height: 84px;  font-size: 46px; }
+  .brighty--xl { width: 140px; height: 140px; font-size: 80px; }
+  .brighty--talk {
+    animation: brighty-talk 1.2s ease-in-out infinite;
+  }
+  @keyframes brighty-talk {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    25% { transform: scale(1.04) rotate(-2deg); }
+    75% { transform: scale(1.04) rotate(2deg); }
+  }
+  .brighty--bounce {
+    animation: brighty-bounce 0.8s ease-out;
+  }
+  @keyframes brighty-bounce {
+    0% { transform: scale(0.5) translateY(20px); opacity: 0; }
+    60% { transform: scale(1.1) translateY(-4px); opacity: 1; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+  }
+
   /* ===== HEADER ===== */
   .header {
     display: flex;
@@ -96,10 +149,17 @@
   }
 
   /* ===== BANNER ===== */
+  .banner-with-brighty {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .banner-with-brighty h2 { margin: 0; }
+  .banner-with-brighty p { margin-top: 2px; }
   .banner {
-    padding: 16px 16px 20px;
+    padding: 20px 20px 28px;
     color: white;
     flex-shrink: 0;
+    border-bottom-left-radius: var(--hero-radius);
+    border-bottom-right-radius: var(--hero-radius);
   }
   .banner-indigo { background: var(--indigo-500); }
   .banner-green { background: var(--emerald-500); }
@@ -339,6 +399,9 @@
   }
 
   /* ===== LISTEN SCREEN ===== */
+  .listen-brighty {
+    display: flex; justify-content: center; margin: 8px 0 20px;
+  }
   .listen-controls {
     display: flex; justify-content: center; margin: 20px 0;
   }
@@ -392,14 +455,18 @@
 
   /* ===== BUTTONS ===== */
   .btn {
-    width: 100%; padding: 14px 24px; border: none; border-radius: 12px;
+    width: 100%; padding: 16px 24px; border: none; border-radius: 999px;
     font-family: 'Rubik', sans-serif; font-size: 16px; font-weight: 600;
     cursor: pointer; transition: all 0.2s; text-align: center;
     display: block;
   }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-primary { background: var(--indigo-500); color: white; }
-  .btn-primary:hover:not(:disabled) { background: var(--indigo-600); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+  .btn-primary {
+    background: var(--primary); color: white;
+    box-shadow: var(--shadow-cta);
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); }
+  .btn-primary:active:not(:disabled) { background: var(--primary-pressed); transform: translateY(0); }
   .btn-green { background: var(--emerald-500); color: white; }
   .btn-green:hover:not(:disabled) { background: var(--emerald-600); }
   .btn-outline {
@@ -418,7 +485,8 @@
   /* ===== PASSAGE CARD ===== */
   .passage-card {
     background: var(--white); border: 1.5px dashed var(--slate-200);
-    border-radius: 16px; padding: 20px;
+    border-radius: 20px; padding: 20px;
+    box-shadow: var(--shadow-card);
   }
   .passage-label {
     font-size: 13px; color: var(--slate-500); margin-bottom: 12px; font-weight: 500;
@@ -752,12 +820,12 @@
   <!-- ===== SCREEN 0: Onboarding ===== -->
   <div class="screen active" id="screenOnboard">
     <div class="banner banner-indigo">
-      <h2>Hi! I'm your reading tutor &#128075;<br>I can help you!</h2>
+      <h2>Hi! I'm Brighty &#128075;<br>I'll help you read.</h2>
     </div>
     <div class="onboard-center">
-      <div class="onboard-illustration"><div class="illus-dot"></div></div>
+      <div class="brighty brighty--xl brighty--bounce" id="onboardBrighty">&#128048;</div>
       <div class="onboard-title" id="onboardTitle">Read the text aloud</div>
-      <div class="onboard-desc" id="onboardDesc">Use your microphone to read passages. Our AI tutor will listen and help you improve.</div>
+      <div class="onboard-desc" id="onboardDesc">Pick a story, hear me read it, then read it back to me.</div>
       <div class="onboard-dots">
         <div class="onboard-dot active" id="dot0"></div>
         <div class="onboard-dot" id="dot1"></div>
@@ -773,7 +841,10 @@
   <!-- ===== SCREEN 1: Grade Selection ===== -->
   <div class="screen" id="screenGrade">
     <div class="banner banner-indigo">
-      <h2>But first...</h2>
+      <div class="banner-with-brighty">
+        <div class="brighty brighty--md">&#128048;</div>
+        <h2>What grade are you in?</h2>
+      </div>
     </div>
     <div class="screen-content">
       <div class="grade-center">
@@ -794,8 +865,13 @@
   <!-- ===== SCREEN: Role ===== -->
   <div class="screen" id="screenRole">
     <div class="banner banner-indigo">
-      <h2>Pick your adventure</h2>
-      <p>What kind of reading do you want today?</p>
+      <div class="banner-with-brighty">
+        <div class="brighty brighty--md">&#128048;</div>
+        <div>
+          <h2>Pick your adventure</h2>
+          <p>What kind of reading sounds fun today?</p>
+        </div>
+      </div>
     </div>
     <div class="screen-content">
       <div class="role-grid">
@@ -844,8 +920,13 @@
   <!-- ===== SCREEN: Situation ===== -->
   <div class="screen" id="screenSituation">
     <div class="banner banner-indigo">
-      <h2>What is it about?</h2>
-      <p>Pick an idea, or type your own.</p>
+      <div class="banner-with-brighty">
+        <div class="brighty brighty--md">&#128048;</div>
+        <div>
+          <h2>What is it about?</h2>
+          <p>Pick an idea, or tell me your own!</p>
+        </div>
+      </div>
     </div>
     <div class="screen-content">
       <div class="situation-form">
@@ -873,6 +954,7 @@
     </div>
     <div class="screen-content">
       <div class="generating-center">
+        <div class="brighty brighty--xl brighty--talk">&#128048;</div>
         <div class="generating-dots"><span></span><span></span><span></span></div>
         <div class="generating-error hidden" id="generatingError"></div>
       </div>
@@ -888,8 +970,13 @@
   <!-- ===== SCREEN: Get Ready ===== -->
   <div class="screen" id="screenGetReady">
     <div class="banner banner-indigo">
-      <h2>Here's your story &#128214;</h2>
-      <p>Tap when you're ready to start.</p>
+      <div class="banner-with-brighty">
+        <div class="brighty brighty--md">&#128048;</div>
+        <div>
+          <h2>Here's your story &#128214;</h2>
+          <p>I made it just for you. Ready when you are!</p>
+        </div>
+      </div>
     </div>
     <div class="screen-content">
       <div class="passage-card">
@@ -905,8 +992,13 @@
   <!-- ===== SCREEN: Voice Pick ===== -->
   <div class="screen" id="screenVoicePick">
     <div class="banner banner-indigo">
-      <h2>Pick your reading buddy &#127908;</h2>
-      <p>Who should read the story to you?</p>
+      <div class="banner-with-brighty">
+        <div class="brighty brighty--md">&#128048;</div>
+        <div>
+          <h2>Pick your reading buddy &#127908;</h2>
+          <p>Tap a buddy to hear them say hi!</p>
+        </div>
+      </div>
     </div>
     <div class="screen-content">
       <div class="voice-grid" id="voicePickerGrid"></div>
@@ -927,10 +1019,13 @@
   <!-- ===== SCREEN: Listen ===== -->
   <div class="screen" id="screenListen">
     <div class="banner banner-indigo">
-      <h2 id="listenTitle">First, listen carefully &#128064;</h2>
+      <h2 id="listenTitle">Listen first &#128064;</h2>
       <p id="listenSubtitle"><span id="listenStatus">Getting your story ready...</span></p>
     </div>
     <div class="screen-content">
+      <div class="listen-brighty">
+        <div class="brighty brighty--lg" id="listenBrighty">&#128048;</div>
+      </div>
       <div class="passage-card">
         <div class="passage-label">&#128266; Listening...</div>
         <div class="passage-text" id="listenPassageText"></div>
@@ -954,7 +1049,10 @@
   <!-- ===== SCREEN 2: Reading ===== -->
   <div class="screen" id="screenReading">
     <div class="banner banner-indigo">
-      <h2 id="readingTitle">Hi! I'm your reading tutor &#128075;<br>Read the passage below out loud:</h2>
+      <div class="banner-with-brighty">
+        <div class="brighty brighty--md">&#128048;</div>
+        <h2 id="readingTitle">Time to shine! &#127775;<br>Read it out loud.</h2>
+      </div>
     </div>
     <div class="screen-content">
       <div class="passage-card">
@@ -976,7 +1074,10 @@
   <!-- ===== SCREEN 3: Results ===== -->
   <div class="screen" id="screenResults">
     <div class="banner banner-green" id="resultsBanner">
-      <h2 id="resultsTitle"></h2>
+      <div class="banner-with-brighty">
+        <div class="brighty brighty--md brighty--bounce">&#128048;</div>
+        <h2 id="resultsTitle"></h2>
+      </div>
     </div>
     <div class="star-banner" id="starBanner">
       <div class="stars" id="starsDisplay"></div>
@@ -1199,9 +1300,9 @@ function closeApp() {
 
 // ===== ONBOARDING =====
 const ONBOARD_SLIDES = [
-  { title: 'Read the text aloud', desc: 'Use your microphone to read passages. Our AI tutor will listen and help you improve.' },
-  { title: 'See your mistakes', desc: 'Words you struggled with will be highlighted so you can improve.' },
-  { title: 'Practice tricky words', desc: 'Practice the words you find difficult until you master them.' },
+  { title: 'Pick a story', desc: "Choose a grade and a topic you love. I'll write a story just for you." },
+  { title: 'Listen, then read', desc: "I'll read it out loud first. Then it's your turn to read it back." },
+  { title: 'Get your stars', desc: 'See how many words per minute you read, and which tricky words to practice.' },
 ];
 
 function updateOnboardSlide() {
@@ -1661,7 +1762,13 @@ function playSynthBuffer(audioData, myRun) {
     requestAnimationFrame(tickHighlight);
   }
 
-  audio.onplay = () => requestAnimationFrame(tickHighlight);
+  audio.onplay = () => {
+    document.getElementById('listenBrighty')?.classList.add('brighty--talk');
+    requestAnimationFrame(tickHighlight);
+  };
+  audio.onpause = () => {
+    document.getElementById('listenBrighty')?.classList.remove('brighty--talk');
+  };
   audio.onended = () => {
     if (myRun === narrationState.runId) finishNarration();
   };
@@ -1761,6 +1868,7 @@ function highlightUpTo(n) {
 
 function finishNarration() {
   narrationState.active = false;
+  document.getElementById('listenBrighty')?.classList.remove('brighty--talk');
   highlightUpTo((currentText.match(/\S+/g) || []).length);
   document.getElementById('listenAction').classList.remove('hidden');
 }
@@ -2127,6 +2235,27 @@ function showResults() {
 
   previousScores = { ...scores };
   showScreen('screenResults');
+  // Celebrate a strong result (and any improvement on re-reads).
+  if (scores.overall >= 70 || (previousWpm != null && wpm > previousWpm)) {
+    spawnConfetti();
+  }
+}
+
+function spawnConfetti() {
+  const colors = ['#755dfc', '#ffd230', '#22C55E', '#FB7185', '#60A5FA'];
+  const layer = document.createElement('div');
+  layer.className = 'confetti-layer';
+  for (let i = 0; i < 60; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = (Math.random() * 100) + '%';
+    piece.style.background = colors[i % colors.length];
+    piece.style.animationDelay = (Math.random() * 0.4) + 's';
+    piece.style.transform = 'rotate(' + (Math.random() * 360) + 'deg)';
+    layer.appendChild(piece);
+  }
+  document.body.appendChild(layer);
+  setTimeout(() => layer.remove(), 3000);
 }
 
 // "Read it again" — replay the AI narration, then re-read the same passage.
