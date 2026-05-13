@@ -944,7 +944,7 @@
       <button class="btn-link" id="listenSkip" onclick="skipListen()">Skip listening &#8594;</button>
     </div>
     <div class="action-area hidden" id="listenAction">
-      <button class="mic-btn mic-btn-green" onclick="goToPracticeRead()">
+      <button class="mic-btn mic-btn-green" onclick="goToReadAloud()">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 12h14M12 5l7 7-7 7" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <div class="action-label action-label-green">Now you try!</div>
@@ -1000,9 +1000,8 @@
     <div class="screen-bottom hidden" id="resultsButtons">
       <div class="btn-row">
         <button class="btn btn-outline hidden" id="btnReadAgain" onclick="readAgain()">Read it again &#128257;</button>
-        <button class="btn btn-primary hidden" id="btnHotRead" onclick="startHotRead()">Time to shine! &#127775;</button>
         <button class="btn btn-green hidden" id="btnPracticeNew" onclick="goToPractice()">Practice new words</button>
-        <button class="btn btn-outline hidden" id="btnNewText" onclick="tryNewText()">Try a new text &#8594;</button>
+        <button class="btn btn-primary hidden" id="btnNewText" onclick="tryNewText()">Try a new text &#8594;</button>
       </div>
     </div>
   </div>
@@ -1146,10 +1145,8 @@ let currentText = '';
 let currentTaggedWords = []; // [{word, tier: 2|3, phonetic?: string}]
 let currentPhoneticGuides = {}; // { word: 'pho-NEH-tik' }
 let readingStartTime = null;
-let sessionState = { phase: 'practice', practice: null, hot: null, practiceReads: 0 };
-// `phase`: 'practice' = trial reads with feedback (looped), 'hot' = final "time to shine" read.
-// `practice` / `hot` store {wpm, wordsHeard, totalWords, elapsedMs, scores} for each phase.
-// `practiceReads` increments each time the user re-reads the passage.
+// Tracks the most recent read so the results screen can show WPM + words.
+let lastRead = null;
 let sentences = [];
 let recognizer = null;
 let isReading = false;
@@ -1296,7 +1293,7 @@ async function goToGenerate() {
     applyPassage(passage);
     attemptCount = 0;
     previousScores = null;
-    sessionState = { phase: 'practice', practice: null, hot: null, practiceReads: 0 };
+    lastRead = null;
     showGetReady();
   } catch (err) {
     console.error('Gemini error:', err);
@@ -1770,7 +1767,7 @@ function finishNarration() {
 
 function skipListen() {
   stopNarration();
-  goToPracticeRead();
+  goToReadAloud();
 }
 
 function stopNarration() {
@@ -1794,7 +1791,7 @@ function stopNarration() {
   }
 }
 
-function goToPracticeRead() {
+function goToReadAloud() {
   stopNarration();
   showScreen('screenReading');
   resetReadingUI();
@@ -1808,9 +1805,8 @@ function pickPassage() {
 }
 
 function resetReadingUI() {
-  document.getElementById('readingTitle').innerHTML = sessionState.phase === 'hot'
-    ? "Time to shine! &#127775;<br>Read the passage one more time."
-    : "Your turn &#128075;<br>Read it out loud.";
+  document.getElementById('readingTitle').innerHTML =
+    "Time to shine! &#127775;<br>Read it out loud.";
   document.getElementById('passageText').innerHTML = currentText;
   document.getElementById('btnMic').className = 'mic-btn mic-btn-record';
   document.getElementById('btnMic').innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
@@ -2004,28 +2000,19 @@ function showResults() {
   const wordsHeard = (allRecognizedText.match(/\b\w+\b/g) || []).length;
   const totalWords = (currentText.match(/\b\w+\b/g) || []).length;
   const wpm = elapsedMs > 0 ? Math.round((wordsHeard / elapsedMs) * 60000) : 0;
-  sessionState[sessionState.phase] = { wpm, wordsHeard, totalWords, elapsedMs, scores };
-  if (sessionState.phase === 'practice') sessionState.practiceReads++;
+  const previousWpm = lastRead?.wpm ?? null;
+  lastRead = { wpm, wordsHeard, totalWords, elapsedMs, scores };
 
   const isReAttempt = previousScores != null;
-  const isPractice = sessionState.phase === 'practice';
-  const practiceWpmForDelta = sessionState.practice?.wpm;
-  const wpmDelta = (!isPractice && practiceWpmForDelta != null) ? wpm - practiceWpmForDelta : null;
 
-  // Banner
+  // Banner — celebrate first read, encourage on re-reads, callout improvement when there is one.
   let bannerText;
-  if (isPractice) {
-    bannerText = (sessionState.practiceReads > 1)
-      ? 'Even better! Your practice read:'
-      : 'Nice work! Here is your practice read:';
-  } else if (wpmDelta != null) {
-    const arrow = wpmDelta > 0 ? '↑' : wpmDelta < 0 ? '↓' : '→';
-    const sign = wpmDelta > 0 ? '+' : '';
-    bannerText = `You shone! ${practiceWpmForDelta} → ${wpm} WPM ${arrow} (${sign}${wpmDelta})`;
+  if (isReAttempt && previousWpm != null && wpm > previousWpm) {
+    bannerText = `Even better! ${previousWpm} → ${wpm} WPM ↑`;
   } else if (isReAttempt) {
     bannerText = 'Getting better! Your results:';
   } else {
-    bannerText = 'Great job! Your results:';
+    bannerText = 'You shone! Your results:';
   }
   document.getElementById('resultsTitle').textContent = bannerText;
 
@@ -2039,8 +2026,7 @@ function showResults() {
 
   // Score cards
   const scoresRow = document.getElementById('scoresRow');
-  const practiceWpm = sessionState.practice?.wpm;
-  const wpmWas = !isPractice && practiceWpm != null ? '<div class="score-was">practice: ' + practiceWpm + '</div>' : '';
+  const wpmWas = previousWpm != null ? '<div class="score-was">was ' + previousWpm + '</div>' : '';
   const wpmCard = '<div class="score-card"><div class="score-value score-value-indigo">' + wpm + '</div><div class="score-label">WPM</div>' + wpmWas + '</div>';
   const wordsCard = '<div class="score-card"><div class="score-value score-value-indigo">' + wordsHeard + '</div><div class="score-label">words read</div></div>';
   scoresRow.innerHTML = wpmCard + wordsCard + [
@@ -2126,47 +2112,25 @@ function showResults() {
     chipsEl.innerHTML = '';
   }
 
-  // Bottom actions
+  // Bottom actions — single read flow: re-read, practice tricky words, or move on.
   const resultsAction = document.getElementById('resultsAction');
   const resultsButtons = document.getElementById('resultsButtons');
-  const btnHotRead = document.getElementById('btnHotRead');
+  const btnReadAgain = document.getElementById('btnReadAgain');
   const btnPracticeNew = document.getElementById('btnPracticeNew');
   const btnNewText = document.getElementById('btnNewText');
 
-  if (isPractice) {
-    // After a practice read, offer "Read it again" (loop) and "Time to shine" (advance).
-    resultsAction.classList.add('hidden');
-    resultsButtons.classList.remove('hidden');
-    document.getElementById('btnReadAgain').classList.remove('hidden');
-    btnHotRead.classList.remove('hidden');
-    btnPracticeNew.classList.add('hidden');
-    btnNewText.classList.add('hidden');
-  } else {
-    // After hot read, surface "Try a new text" with optional word practice.
-    resultsAction.classList.add('hidden');
-    resultsButtons.classList.remove('hidden');
-    document.getElementById('btnReadAgain').classList.add('hidden');
-    btnHotRead.classList.add('hidden');
-    btnPracticeNew.classList.toggle('hidden', practiceWords.length === 0);
-    btnNewText.classList.remove('hidden');
-  }
+  resultsAction.classList.add('hidden');
+  resultsButtons.classList.remove('hidden');
+  btnReadAgain.classList.remove('hidden');
+  btnPracticeNew.classList.toggle('hidden', practiceWords.length === 0);
+  btnNewText.classList.remove('hidden');
 
   previousScores = { ...scores };
   showScreen('screenResults');
 }
 
-function startHotRead() {
-  sessionState.phase = 'hot';
-  attemptCount = 0;
-  previousScores = null;
-  showScreen('screenReading');
-  resetReadingUI();
-}
-
-// Loop the practice phase: replay the AI narration, then mic again.
+// "Read it again" — replay the AI narration, then re-read the same passage.
 function readAgain() {
-  sessionState.phase = 'practice';
-  attemptCount = 0;
   previousScores = null;
   goToListen();
 }
