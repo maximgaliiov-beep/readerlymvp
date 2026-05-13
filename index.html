@@ -6,6 +6,7 @@
 <title>Readerly — AI Reading Tutor</title>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
+<script src="prompt.js"></script>
 <style>
   :root {
     --indigo-50: #EEF2FF;
@@ -236,6 +237,75 @@
     color: var(--indigo-600); font-weight: 600;
   }
 
+  /* ===== ROLE PICKER ===== */
+  .role-grid {
+    display: grid; grid-template-columns: 1fr;
+    gap: 10px; width: 100%; max-width: 420px; margin: 0 auto;
+  }
+  .role-card {
+    background: var(--white); border: 2px solid var(--slate-200);
+    border-radius: 12px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 14px;
+    cursor: pointer; transition: all 0.2s; text-align: left;
+  }
+  .role-card:hover { border-color: var(--indigo-400); background: var(--indigo-50); }
+  .role-card.selected { border-color: var(--indigo-500); background: var(--indigo-50); }
+  .role-emoji { font-size: 28px; flex-shrink: 0; line-height: 1; }
+  .role-text { flex: 1; min-width: 0; }
+  .role-title { font-size: 16px; font-weight: 600; color: var(--slate-900); }
+  .role-desc { font-size: 13px; color: var(--slate-500); margin-top: 2px; }
+
+  /* ===== SITUATION PICKER ===== */
+  .situation-form {
+    width: 100%; max-width: 420px; margin: 0 auto;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .situation-input {
+    width: 100%; padding: 14px 16px;
+    border: 2px solid var(--slate-200); border-radius: 12px;
+    font-family: 'Rubik', sans-serif; font-size: 16px;
+    color: var(--slate-900); background: var(--white);
+    resize: none; line-height: 1.4;
+  }
+  .situation-input:focus { outline: none; border-color: var(--indigo-500); }
+  .situation-label {
+    font-size: 14px; font-weight: 500; color: var(--slate-500);
+    margin-top: 4px;
+  }
+  .situation-chips {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .situation-chip {
+    background: var(--white); border: 1px solid var(--slate-200);
+    border-radius: 999px; padding: 8px 14px;
+    font-family: 'Rubik', sans-serif; font-size: 14px;
+    color: var(--slate-700); cursor: pointer;
+    transition: all 0.2s;
+  }
+  .situation-chip:hover { border-color: var(--indigo-400); background: var(--indigo-50); }
+
+  /* ===== GENERATING SCREEN ===== */
+  .generating-center {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 24px;
+  }
+  .generating-dots { display: flex; gap: 12px; }
+  .generating-dots span {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--indigo-500);
+    animation: gen-bounce 1.2s infinite ease-in-out both;
+  }
+  .generating-dots span:nth-child(1) { animation-delay: -0.32s; }
+  .generating-dots span:nth-child(2) { animation-delay: -0.16s; }
+  @keyframes gen-bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1.0); opacity: 1; }
+  }
+  .generating-error {
+    color: var(--red-500); font-size: 15px; text-align: center;
+    max-width: 360px; padding: 0 16px;
+  }
+
   /* ===== BUTTONS ===== */
   .btn {
     width: 100%; padding: 14px 24px; border: none; border-radius: 12px;
@@ -367,6 +437,7 @@
   .score-value-green { color: var(--emerald-500); }
   .score-value-yellow { color: var(--amber-500); }
   .score-value-red { color: var(--red-500); }
+  .score-value-indigo { color: var(--indigo-500); }
   .score-label { font-size: 12px; color: var(--slate-500); margin-top: 2px; font-weight: 500; }
   .score-was { font-size: 11px; color: var(--slate-400); margin-top: 2px; }
 
@@ -624,22 +695,116 @@
       <div class="grade-center">
         <div class="grade-title">Choose your grade</div>
         <div class="grade-grid">
-          <div class="grade-card" data-level="k1" onclick="selectGrade(this)">Kindergarten - Grade 1</div>
-          <div class="grade-card" data-level="2nd3rd" onclick="selectGrade(this)">Grade 2-3</div>
-          <div class="grade-card" data-level="4th5th" onclick="selectGrade(this)">Grade 4-5</div>
-          <div class="grade-card" data-level="6th8th" onclick="selectGrade(this)">Grade 6-8</div>
+          <div class="grade-card" data-level="K-2" onclick="selectGrade(this)">K - Grade 2</div>
+          <div class="grade-card" data-level="3-5" onclick="selectGrade(this)">Grade 3-5</div>
+          <div class="grade-card" data-level="6-8" onclick="selectGrade(this)">Grade 6-8</div>
+          <div class="grade-card" data-level="9-12" onclick="selectGrade(this)">Grade 9-12</div>
         </div>
       </div>
     </div>
     <div class="screen-bottom">
-      <button class="btn btn-primary" id="btnContinue" onclick="goToReading()" disabled>Continue &#8594;</button>
+      <button class="btn btn-primary" id="btnContinue" onclick="goToRole()" disabled>Continue &#8594;</button>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: Role ===== -->
+  <div class="screen" id="screenRole">
+    <div class="banner banner-indigo">
+      <h2>Pick your adventure</h2>
+      <p>What kind of reading do you want today?</p>
+    </div>
+    <div class="screen-content">
+      <div class="role-grid">
+        <div class="role-card" data-role="Narrate an audiobook" onclick="selectRole(this)">
+          <div class="role-emoji">&#128214;</div>
+          <div class="role-text">
+            <div class="role-title">Narrate an audiobook</div>
+            <div class="role-desc">A story to read aloud</div>
+          </div>
+        </div>
+        <div class="role-card" data-role="Host a podcast" onclick="selectRole(this)">
+          <div class="role-emoji">&#127908;</div>
+          <div class="role-text">
+            <div class="role-title">Host a podcast</div>
+            <div class="role-desc">Talk to a listener</div>
+          </div>
+        </div>
+        <div class="role-card" data-role="Give a talk" onclick="selectRole(this)">
+          <div class="role-emoji">&#127897;&#65039;</div>
+          <div class="role-text">
+            <div class="role-title">Give a talk</div>
+            <div class="role-desc">Persuade the room</div>
+          </div>
+        </div>
+        <div class="role-card" data-role="Teach a lesson" onclick="selectRole(this)">
+          <div class="role-emoji">&#127822;</div>
+          <div class="role-text">
+            <div class="role-title">Teach a lesson</div>
+            <div class="role-desc">Explain how something works</div>
+          </div>
+        </div>
+        <div class="role-card" data-role="Perform a scene" onclick="selectRole(this)">
+          <div class="role-emoji">&#127917;&#65039;</div>
+          <div class="role-text">
+            <div class="role-title">Perform a scene</div>
+            <div class="role-desc">Step into a character</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-bottom">
+      <button class="btn btn-primary" id="btnRoleContinue" onclick="goToSituation()" disabled>Continue &#8594;</button>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: Situation ===== -->
+  <div class="screen" id="screenSituation">
+    <div class="banner banner-indigo">
+      <h2>What is it about?</h2>
+      <p>Pick an idea, or type your own.</p>
+    </div>
+    <div class="screen-content">
+      <div class="situation-form">
+        <textarea
+          id="situationInput"
+          class="situation-input"
+          placeholder="A puppy who learns to swim..."
+          rows="3"
+          oninput="onSituationChange()"
+        ></textarea>
+        <div class="situation-label">Need an idea?</div>
+        <div class="situation-chips" id="situationChips"></div>
+      </div>
+    </div>
+    <div class="screen-bottom">
+      <button class="btn btn-primary" id="btnSituationContinue" onclick="goToGenerate()" disabled>Make my story &#8594;</button>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: Generating ===== -->
+  <div class="screen" id="screenGenerating">
+    <div class="banner banner-indigo">
+      <h2>Writing your story...</h2>
+      <p id="generatingHint">Picking the right words just for you</p>
+    </div>
+    <div class="screen-content">
+      <div class="generating-center">
+        <div class="generating-dots"><span></span><span></span><span></span></div>
+        <div class="generating-error hidden" id="generatingError"></div>
+      </div>
+    </div>
+    <div class="screen-bottom hidden" id="generatingActions">
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goToSituation()">&#8592; Change story</button>
+        <button class="btn btn-primary" onclick="goToGenerate()">Try again</button>
+      </div>
     </div>
   </div>
 
   <!-- ===== SCREEN 2: Reading ===== -->
   <div class="screen" id="screenReading">
     <div class="banner banner-indigo">
-      <h2>Hi! I'm your reading tutor &#128075;<br>Read the passage below out loud:</h2>
+      <h2 id="readingTitle">Hi! I'm your reading tutor &#128075;<br>Read the passage below out loud:</h2>
     </div>
     <div class="screen-content">
       <div class="passage-card">
@@ -684,6 +849,7 @@
     </div>
     <div class="screen-bottom hidden" id="resultsButtons">
       <div class="btn-row">
+        <button class="btn btn-primary hidden" id="btnHotRead" onclick="startHotRead()">Time to shine! &#127775;</button>
         <button class="btn btn-green hidden" id="btnPracticeNew" onclick="goToPractice()">Practice new words</button>
         <button class="btn btn-outline hidden" id="btnNewText" onclick="tryNewText()">Try a new text &#8594;</button>
       </div>
@@ -759,39 +925,72 @@
 // ===== CONFIG =====
 const AZURE_KEY = 'REDACTED_AZURE_KEY';
 const AZURE_REGION = 'eastus';
+// TODO: move Gemini calls to a backend so this key doesn't ship in the client.
+const GEMINI_API_KEY = 'REDACTED_GEMINI_KEY';
+const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
-// ===== PASSAGES =====
+// ===== PASSAGES (fallback during Phase 1 — Phase 2 replaces with Gemini) =====
 const PASSAGES = {
-  k1: [
+  'K-2': [
     "The cat sat on the mat. It was a big, fat cat. The cat liked to sit in the sun. One day, the cat saw a rat. The rat ran fast.",
     "I see a red ball. The ball can hop. Hop, hop, hop! The ball is fun.",
-    "My dog is brown. He likes to run and play. We go to the park every day.",
-    "The fish swims in the pond. It is a little blue fish. Splash, splash!",
-    "Look at the bird in the tree. It sings a pretty song. Tweet, tweet, tweet!"
+    "My dog is brown. He likes to run and play. We go to the park every day."
   ],
-  "2nd3rd": [
+  '3-5': [
     "The butterfly landed on a bright yellow flower. Its wings were orange and black. It stayed for a moment, then flew away into the garden.",
     "Sam and his sister walked to the library after school. They found a book about dinosaurs. It had pictures of a huge T-Rex with sharp teeth.",
-    "Rain fell softly on the rooftop. The children watched through the window. A rainbow appeared in the sky when the sun came out again.",
-    "The farmer planted seeds in the spring. He watered them every morning. By summer, tall sunflowers filled the field with bright yellow blooms."
+    "Rain fell softly on the rooftop. The children watched through the window. A rainbow appeared in the sky when the sun came out again."
   ],
-  "4th5th": [
+  '6-8': [
     "The ancient castle stood on top of a rocky cliff overlooking the ocean. Waves crashed against the stones below, sending white spray into the salty air. A narrow path wound its way up the hillside to the castle gates.",
-    "Scientists discovered a new species of frog living deep in the rainforest. The tiny creature was bright blue with golden spots on its back. It could fit on the tip of a human finger.",
-    "The astronaut floated gently inside the space station, watching Earth rotate slowly below. Continents and oceans passed by like a living map. She smiled, thinking about how beautiful our planet looked from above."
+    "Scientists discovered a new species of frog living deep in the rainforest. The tiny creature was bright blue with golden spots on its back. It could fit on the tip of a human finger."
   ],
-  "6th8th": [
+  '9-12': [
     "Throughout history, civilizations have risen and fallen along the banks of great rivers. The Nile, the Tigris, and the Yangtze each nurtured communities that developed writing, agriculture, and complex systems of government. These waterways provided not only sustenance but also routes for trade and cultural exchange.",
-    "The discovery of penicillin by Alexander Fleming in nineteen twenty-eight revolutionized modern medicine. What began as an accidental observation of mold inhibiting bacterial growth eventually led to the development of antibiotics that have saved countless millions of lives worldwide.",
     "Renewable energy sources such as solar, wind, and hydroelectric power are becoming increasingly important as nations work to reduce their dependence on fossil fuels. Engineers and scientists continue to improve the efficiency of these technologies, making clean energy more accessible and affordable for communities around the globe."
   ]
 };
 
-const GRADE_LABELS = { k1: 'K-1st', '2nd3rd': '2nd-3rd', '4th5th': '4th-5th', '6th8th': '6th-8th' };
+const GRADE_LABELS = { 'K-2': 'K-Grade 2', '3-5': 'Grade 3-5', '6-8': 'Grade 6-8', '9-12': 'Grade 9-12' };
+
+const SITUATION_SUGGESTIONS = {
+  'Narrate an audiobook': [
+    'A dog who finds a hidden door',
+    'A kid moving to a new school',
+    'Two friends lost on a hike'
+  ],
+  'Host a podcast': [
+    'Why octopuses are so smart',
+    'The strangest food in the world',
+    'How do dreams work?'
+  ],
+  'Give a talk': [
+    'Recess should be longer',
+    'Schools should teach kids to fail',
+    "Phones don't belong in class"
+  ],
+  'Teach a lesson': [
+    'How rain gets into clouds',
+    'How a seed becomes a plant',
+    'Why ice melts'
+  ],
+  'Perform a scene': [
+    'A grumpy dragon',
+    'A snail in a hurry',
+    'A robot learning to laugh'
+  ]
+};
 
 // ===== STATE =====
 let currentLevel = null;
+let currentRole = null;
+let currentSituation = '';
 let currentText = '';
+let currentTaggedWords = []; // [{word, tier: 2|3, phonetic?: string}]
+let currentPhoneticGuides = {}; // { word: 'pho-NEH-tik' }
+let readingStartTime = null;
+let sessionState = { phase: 'cold', cold: null, hot: null };
 let sentences = [];
 let recognizer = null;
 let isReading = false;
@@ -870,7 +1069,7 @@ function skipOnboarding() {
   showScreen('screenGrade');
 }
 
-// ===== GRADE SELECTION =====
+// ===== ADVENTURE PICKER =====
 function selectGrade(el) {
   document.querySelectorAll('.grade-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
@@ -878,22 +1077,148 @@ function selectGrade(el) {
   document.getElementById('btnContinue').disabled = false;
 }
 
-function goToReading() {
+function goToRole() {
   if (!currentLevel) return;
-  pickPassage();
-  attemptCount = 0;
-  previousScores = null;
-  showScreen('screenReading');
-  resetReadingUI();
+  // Reset role state when re-entering
+  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+  currentRole = null;
+  document.getElementById('btnRoleContinue').disabled = true;
+  showScreen('screenRole');
 }
 
+function selectRole(el) {
+  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  currentRole = el.dataset.role;
+  document.getElementById('btnRoleContinue').disabled = false;
+}
+
+function goToSituation() {
+  if (!currentRole) return;
+  const chips = document.getElementById('situationChips');
+  chips.innerHTML = '';
+  (SITUATION_SUGGESTIONS[currentRole] || []).forEach(s => {
+    const chip = document.createElement('button');
+    chip.className = 'situation-chip';
+    chip.textContent = s;
+    chip.onclick = () => setSituation(s);
+    chips.appendChild(chip);
+  });
+  document.getElementById('situationInput').value = '';
+  currentSituation = '';
+  document.getElementById('btnSituationContinue').disabled = true;
+  showScreen('screenSituation');
+}
+
+function setSituation(text) {
+  document.getElementById('situationInput').value = text;
+  onSituationChange();
+}
+
+function onSituationChange() {
+  const v = document.getElementById('situationInput').value.trim();
+  currentSituation = v;
+  document.getElementById('btnSituationContinue').disabled = v.length < 3;
+}
+
+async function goToGenerate() {
+  if (!currentSituation) return;
+  showScreen('screenGenerating');
+  document.getElementById('generatingError').classList.add('hidden');
+  document.getElementById('generatingActions').classList.add('hidden');
+  document.querySelector('#screenGenerating .generating-dots').classList.remove('hidden');
+
+  try {
+    const passage = await generatePassage(currentLevel, currentRole, currentSituation);
+    applyPassage(passage);
+    attemptCount = 0;
+    previousScores = null;
+    sessionState = { phase: 'cold', cold: null, hot: null };
+    showScreen('screenReading');
+    resetReadingUI();
+  } catch (err) {
+    console.error('Gemini error:', err);
+    const errEl = document.getElementById('generatingError');
+    errEl.textContent = "Couldn't write a story this time. " + (err.message || 'Please try again.');
+    errEl.classList.remove('hidden');
+    document.querySelector('#screenGenerating .generating-dots').classList.add('hidden');
+    document.getElementById('generatingActions').classList.remove('hidden');
+  }
+}
+
+async function generatePassage(grade, role, situation) {
+  const userInputs = `INPUTS:\ngrade band: ${grade}\nactivity: ${role}\nsituation: ${situation}`;
+  const fullPrompt = `${READERLY_MASTER_PROMPT}\n\n---\n\n${userInputs}`;
+  const res = await fetch(GEMINI_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: fullPrompt }] }],
+      generationConfig: {
+        temperature: 0.9,
+        maxOutputTokens: 1024,
+        thinkingConfig: { thinkingBudget: 0 }
+      }
+    })
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`API ${res.status}: ${errText.slice(0, 120)}`);
+  }
+  const data = await res.json();
+  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!raw) throw new Error('Empty response from model.');
+  return parseGeminiOutput(raw);
+}
+
+// Parses [T2: word], [T3: word], and "Name [pho-NEH-tik]" out of the raw passage.
+// Also strips stray markdown wrappers (`backticks`, *italics*) the model sometimes
+// adds around tagged words.
+// Returns { displayText, tagged: [{word, tier}], phonetic: {word: 'pho-NEH-tik'} }.
+function parseGeminiOutput(raw) {
+  const tagged = [];
+  const phonetic = {};
+  let text = raw.trim();
+
+  // Phonetic guides: optional italic wrapper, then a word, then [letters-and-hyphens].
+  // Bracket content has no colon/digits, so this never collides with [T2:/[T3: tags.
+  text = text.replace(/\*?\b([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'\-]*)\*?\s*\[([a-zA-Z][a-zA-Z\-]*)\]/g, (_, name, ph) => {
+    phonetic[name] = ph;
+    return name;
+  });
+
+  // Tier tags: [T2: word] / [T3: word].
+  text = text.replace(/\[T([23]):\s*([^\]]+)\]/g, (_, tier, word) => {
+    const cleanWord = word.trim();
+    tagged.push({ word: cleanWord, tier: parseInt(tier, 10) });
+    return cleanWord;
+  });
+
+  // Strip stray markdown wrappers the model adds around tags.
+  text = text.replace(/`([^`\n]+)`/g, '$1');
+  text = text.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '$1');
+
+  return { displayText: text, tagged, phonetic };
+}
+
+function applyPassage(parsed) {
+  currentText = parsed.displayText;
+  currentTaggedWords = parsed.tagged;
+  currentPhoneticGuides = parsed.phonetic;
+  sentences = currentText.match(/[^.!?\n]+[.!?]+|\S[^\n]*/g)?.map(s => s.trim()).filter(Boolean) || [currentText];
+}
+
+// Static fallback — used by tryNewText if Gemini isn't reachable.
 function pickPassage() {
-  const passages = PASSAGES[currentLevel];
-  currentText = passages[Math.floor(Math.random() * passages.length)];
-  sentences = currentText.match(/[^.!?]+[.!?]+/g)?.map(s => s.trim()).filter(Boolean) || [currentText];
+  const passages = PASSAGES[currentLevel] || PASSAGES['3-5'];
+  const text = passages[Math.floor(Math.random() * passages.length)];
+  applyPassage({ displayText: text, tagged: [], phonetic: {} });
 }
 
 function resetReadingUI() {
+  document.getElementById('readingTitle').innerHTML = sessionState.phase === 'hot'
+    ? "Time to shine! &#127775;<br>Read the same passage again."
+    : "Meet the story &#128075;<br>Read the passage out loud.";
   document.getElementById('passageText').innerHTML = currentText;
   document.getElementById('btnMic').className = 'mic-btn mic-btn-record';
   document.getElementById('btnMic').innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
@@ -919,6 +1244,7 @@ function initStaticVisualizer(containerId) {
 
 // ===== READING & SPEECH =====
 async function startReading() {
+  readingStartTime = Date.now();
   allRecognizedWords = [];
   allRecognizedText = '';
   finalPronScores = { accuracy: 0, fluency: 0, completeness: 0, prosody: 0, overall: 0 };
@@ -1081,11 +1407,32 @@ function showResults() {
     prosody: Math.round(finalPronScores.prosody / pronScoreWeights),
   } : { overall: 0, accuracy: 0, fluency: 0, completeness: 0, prosody: 0 };
 
+  // WPM: words recognized per minute of elapsed reading time.
+  const elapsedMs = readingStartTime ? Date.now() - readingStartTime : 0;
+  const wordsHeard = (allRecognizedText.match(/\b\w+\b/g) || []).length;
+  const totalWords = (currentText.match(/\b\w+\b/g) || []).length;
+  const wpm = elapsedMs > 0 ? Math.round((wordsHeard / elapsedMs) * 60000) : 0;
+  sessionState[sessionState.phase] = { wpm, wordsHeard, totalWords, elapsedMs, scores };
+
   const isReAttempt = previousScores != null;
+  const isCold = sessionState.phase === 'cold';
+  const coldWpmForDelta = sessionState.cold?.wpm;
+  const wpmDelta = (!isCold && coldWpmForDelta != null) ? wpm - coldWpmForDelta : null;
 
   // Banner
-  document.getElementById('resultsTitle').textContent = isReAttempt
-    ? 'Getting better! Your results:' : 'Great job! Your results:';
+  let bannerText;
+  if (isCold) {
+    bannerText = 'Cold read done! Your results:';
+  } else if (wpmDelta != null) {
+    const arrow = wpmDelta > 0 ? '↑' : wpmDelta < 0 ? '↓' : '→';
+    const sign = wpmDelta > 0 ? '+' : '';
+    bannerText = `You shone! ${coldWpmForDelta} → ${wpm} WPM ${arrow} (${sign}${wpmDelta})`;
+  } else if (isReAttempt) {
+    bannerText = 'Getting better! Your results:';
+  } else {
+    bannerText = 'Great job! Your results:';
+  }
+  document.getElementById('resultsTitle').textContent = bannerText;
 
   // Stars (map overall 0-100 to 1-5 stars)
   const starCount = scores.overall >= 90 ? 5 : scores.overall >= 75 ? 4 : scores.overall >= 60 ? 3 : scores.overall >= 40 ? 2 : 1;
@@ -1097,7 +1444,11 @@ function showResults() {
 
   // Score cards
   const scoresRow = document.getElementById('scoresRow');
-  scoresRow.innerHTML = [
+  const coldWpm = sessionState.cold?.wpm;
+  const wpmWas = !isCold && coldWpm != null ? '<div class="score-was">cold: ' + coldWpm + '</div>' : '';
+  const wpmCard = '<div class="score-card"><div class="score-value score-value-indigo">' + wpm + '</div><div class="score-label">WPM</div>' + wpmWas + '</div>';
+  const wordsCard = '<div class="score-card"><div class="score-value score-value-indigo">' + wordsHeard + '</div><div class="score-label">words read</div></div>';
+  scoresRow.innerHTML = wpmCard + wordsCard + [
     { label: 'Overall', value: scores.overall, prev: previousScores?.overall },
     { label: 'Accuracy', value: scores.accuracy, prev: previousScores?.accuracy },
     { label: 'Complete', value: scores.completeness, prev: previousScores?.completeness },
@@ -1183,21 +1534,36 @@ function showResults() {
   // Bottom actions
   const resultsAction = document.getElementById('resultsAction');
   const resultsButtons = document.getElementById('resultsButtons');
+  const btnHotRead = document.getElementById('btnHotRead');
   const btnPracticeNew = document.getElementById('btnPracticeNew');
   const btnNewText = document.getElementById('btnNewText');
 
-  if (!isReAttempt && practiceWords.length > 0) {
-    resultsAction.classList.remove('hidden');
-    resultsButtons.classList.add('hidden');
-  } else {
+  if (isCold) {
+    // After cold read, focus the user on the hot read.
     resultsAction.classList.add('hidden');
     resultsButtons.classList.remove('hidden');
+    btnHotRead.classList.remove('hidden');
+    btnPracticeNew.classList.add('hidden');
+    btnNewText.classList.add('hidden');
+  } else {
+    // After hot read, surface "Try a new text" with optional practice.
+    resultsAction.classList.add('hidden');
+    resultsButtons.classList.remove('hidden');
+    btnHotRead.classList.add('hidden');
     btnPracticeNew.classList.toggle('hidden', practiceWords.length === 0);
     btnNewText.classList.remove('hidden');
   }
 
   previousScores = { ...scores };
   showScreen('screenResults');
+}
+
+function startHotRead() {
+  sessionState.phase = 'hot';
+  attemptCount = 0;
+  previousScores = null;
+  showScreen('screenReading');
+  resetReadingUI();
 }
 
 // ===== WORD PRACTICE =====
@@ -1437,12 +1803,8 @@ function readSameText() {
 }
 
 function tryNewText() {
-  pickPassage();
-  attemptCount = 0;
-  previousScores = null;
   screenHistory = ['screenGrade'];
-  showScreen('screenReading');
-  resetReadingUI();
+  goToGenerate();
 }
 
 function endPractice() {
