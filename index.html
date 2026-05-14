@@ -298,6 +298,49 @@
     color: var(--indigo-600); font-weight: 600;
   }
 
+  /* ===== STORY IMAGE ===== */
+  .story-image {
+    width: 100%; max-width: 360px; margin: 0 auto 16px;
+    aspect-ratio: 16 / 9;
+    border-radius: 16px;
+    background: var(--slate-100);
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
+    position: relative;
+  }
+  .story-image.is-loading::after {
+    content: '🎨'; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px;
+    animation: gen-bounce 1.2s ease-in-out infinite;
+  }
+  .story-image.is-loading {
+    background: linear-gradient(120deg, var(--slate-100) 30%, var(--slate-200) 50%, var(--slate-100) 70%);
+    background-size: 200% 100%;
+    animation: img-shimmer 1.6s linear infinite;
+  }
+  @keyframes img-shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+  }
+  .story-image.is-error { display: none; }
+  .story-image img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+
+  /* ===== SELECTABLE SENTENCES (paused state) ===== */
+  .sentence-wrap {
+    display: inline; padding: 2px 4px; margin: 0 -4px;
+    border-radius: 6px; transition: background 0.15s, outline-color 0.15s;
+  }
+  .sentence-selectable { cursor: pointer; }
+  .sentence-selectable:hover { background: var(--indigo-50); }
+  .sentence-selected {
+    background: var(--indigo-100);
+    outline: 2px dashed var(--indigo-500);
+    outline-offset: 2px;
+  }
+
   /* ===== ROLE PICKER ===== */
   .role-grid {
     display: grid; grid-template-columns: 1fr;
@@ -997,6 +1040,7 @@
       </div>
     </div>
     <div class="screen-content">
+      <div class="story-image is-loading" id="storyImage"></div>
       <div class="passage-card">
         <div class="passage-label">&#128214; Your passage:</div>
         <div class="passage-text" id="passageText"></div>
@@ -1234,9 +1278,13 @@ let currentSituation = '';
 let currentText = '';
 let currentTaggedWords = []; // [{word, tier: 2|3, phonetic?: string}]
 let currentPhoneticGuides = {}; // { word: 'pho-NEH-tik' }
+let currentImageUrl = null;
+let currentImageStatus = 'idle'; // 'idle' | 'loading' | 'ready' | 'error'
 let readingStartTime = null;
 // 'idle' (haven't started or just reset), 'reading' (mic on), 'paused' (mic off mid-passage).
 let readingPhase = 'idle';
+// When paused, the kid can tap any sentence to make it the listen target.
+let selectedSentenceIdx = null;
 // Tracks the most recent read so the results screen can show WPM + words.
 let lastRead = null;
 
@@ -1378,6 +1426,22 @@ async function goToGenerate() {
     attemptCount = 0;
     previousScores = null;
     lastRead = null;
+    // Kick off image generation in parallel — non-blocking. Cold Reading
+    // shows a shimmer placeholder until this resolves (or errors).
+    currentImageUrl = null;
+    currentImageStatus = 'loading';
+    updateStoryImage();
+    generateStoryImage(currentSituation, currentRole)
+      .then(dataUrl => {
+        currentImageUrl = dataUrl;
+        currentImageStatus = 'ready';
+        updateStoryImage();
+      })
+      .catch(err => {
+        console.error('Story image generation failed:', err);
+        currentImageStatus = 'error';
+        updateStoryImage();
+      });
     goToVoicePick();
   } catch (err) {
     console.error('Gemini error:', err);
@@ -1386,6 +1450,41 @@ async function goToGenerate() {
     errEl.classList.remove('hidden');
     document.querySelector('#screenGenerating .generating-dots').classList.add('hidden');
     document.getElementById('generatingActions').classList.remove('hidden');
+  }
+}
+
+// Generate a kid-friendly illustration that matches the passage's situation.
+// Runs in parallel with passage rendering — non-blocking. Updates UI as it lands.
+async function generateStoryImage(situation, role) {
+  const prompt = [
+    'Children\'s book illustration.',
+    `Subject: ${situation}.`,
+    'Style: bright, friendly, warm, simple shapes, kid-friendly characters.',
+    'Single-scene composition with clear focal point.',
+    'No text or letters anywhere in the image.'
+  ].join(' ');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+  });
+  if (!res.ok) throw new Error(`Image API ${res.status}`);
+  const data = await res.json();
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  const imagePart = parts.find(p => p.inlineData?.mimeType?.startsWith('image/'));
+  if (!imagePart) throw new Error('No image in response');
+  return `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
+}
+
+function updateStoryImage() {
+  const el = document.getElementById('storyImage');
+  if (!el) return;
+  el.className = 'story-image is-' + currentImageStatus;
+  if (currentImageStatus === 'ready' && currentImageUrl) {
+    el.innerHTML = '<img src="' + currentImageUrl + '" alt="Story illustration">';
+  } else {
+    el.innerHTML = '';
   }
 }
 
@@ -1463,6 +1562,7 @@ function goToColdRead() {
   stopNarration();
   showScreen('screenReading');
   resetReadingUI();
+  updateStoryImage();
 }
 
 // ===== TTS NARRATION (Listen step, Azure Neural TTS) =====
@@ -1639,8 +1739,11 @@ function listenCurrentSentence() {
   // Capture which mode we entered from so we can hand back correctly.
   const wasPaused = readingPhase === 'paused';
   const wasIdle = readingPhase === 'idle';
-  const sentenceIdx = currentSentenceIdx();
-  const sentence = sentences[sentenceIdx];
+  // Paused: read whatever sentence the kid tapped (defaults to current). Idle: sentence 0.
+  const sentenceIdx = wasPaused
+    ? (selectedSentenceIdx != null ? selectedSentenceIdx : currentSentenceIdx())
+    : 0;
+  const sentence = sentences[sentenceIdx] || sentences[0] || '';
 
   // Disable all action buttons during demo.
   document.querySelectorAll('#readingAction .mic-btn').forEach(b => b.disabled = true);
@@ -1665,8 +1768,10 @@ function listenCurrentSentence() {
   const styleOpen  = voice.style ? `<mstts:express-as style="${voice.style}">` : '';
   const styleClose = voice.style ? `</mstts:express-as>` : '';
   const sentenceSafe = escapeForSsml(sentence);
-  // Append "Now you read it." only when handing the mic to the student.
-  const tail = (wasIdle || wasPaused) ? '<break time="600ms"/>Now you read it.' : '';
+  // Append "Now you read it." only from idle (the entry-point hand-off).
+  // From paused, we just play the sentence and leave the kid paused so they
+  // can replay another one or hit Resume themselves.
+  const tail = wasIdle ? '<break time="600ms"/>Now you read it.' : '';
   const ssml = [
     '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis"',
     ' xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="en-US">',
@@ -1686,7 +1791,7 @@ function listenCurrentSentence() {
       try { synthesizer.close(); } catch (_) {}
       if (myRun !== narrationState.runId) return;
       if (result.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
-        _playListenBuffer(result.audioData, myRun, wasIdle, wasPaused, onDone);
+        _playListenBuffer(result.audioData, myRun, wasIdle, onDone);
       } else {
         console.error('Listen synthesis failed:', result.errorDetails || result.reason);
         onDone();
@@ -1700,7 +1805,7 @@ function listenCurrentSentence() {
   );
 }
 
-function _playListenBuffer(audioData, myRun, wasIdle, wasPaused, onDone) {
+function _playListenBuffer(audioData, myRun, wasIdle, onDone) {
   if (myRun !== narrationState.runId) { onDone(); return; }
   const blob = new Blob([audioData], { type: 'audio/wav' });
   const url = URL.createObjectURL(blob);
@@ -1712,9 +1817,10 @@ function _playListenBuffer(audioData, myRun, wasIdle, wasPaused, onDone) {
     if (myRun !== narrationState.runId) { onDone(); return; }
     narrationState.active = false;
     onDone();
-    // Hand off to student: auto-start (idle) or auto-resume (paused).
+    // From idle, the demo is the kick-off; auto-start the student's read.
+    // From paused, leave the student paused so they can tap Resume themselves
+    // (or pick a different sentence to hear again).
     if (wasIdle) startReading();
-    else if (wasPaused) resumeReading();
   };
   audio.onerror = (e) => {
     console.error('Listen audio error:', e);
@@ -1756,6 +1862,7 @@ function pickPassage() {
 
 function resetReadingUI() {
   readingPhase = 'idle';
+  selectedSentenceIdx = null;
   document.getElementById('readingTitle').innerHTML =
     "Cold reading &#128214;<br>Listen first, or read it yourself.";
   // Sentence 0 active, the rest dim — student hasn't started yet.
@@ -1813,6 +1920,9 @@ async function resumeReading() {
   if (readingPhase !== 'paused') return;
   readingPhase = 'reading';
   isReading = true;
+  // Clear the tap-selection — back to read mode.
+  selectedSentenceIdx = null;
+  renderPassageHighlight(currentSentenceIdx());
   showActionsState('Reading');
   // Don't reset accumulators — Azure picks up from where the kid is.
   await _initRecognizer();
@@ -1835,6 +1945,10 @@ function pauseReading() {
   } else {
     releaseStream();
   }
+  // Default the tap-selection to the sentence the kid was on, so tapping
+  // "Listen this" without picking anything still does the right thing.
+  selectedSentenceIdx = currentSentenceIdx();
+  renderPassageHighlight(currentSentenceIdx());
   showActionsState('Paused');
 }
 
@@ -1948,17 +2062,29 @@ function currentSentenceIdx() {
 
 function renderPassageHighlight(activeSentenceIdx) {
   const el = document.getElementById('passageText');
+  const selectable = readingPhase === 'paused';
   el.innerHTML = sentences.map((s, i) => {
-    if (i < activeSentenceIdx) return '<span style="color:var(--emerald-500);">' + s + '</span>';
-    if (i === activeSentenceIdx) {
+    let inner;
+    if (i < activeSentenceIdx) {
+      inner = '<span style="color:var(--emerald-500);">' + s + '</span>';
+    } else if (i === activeSentenceIdx) {
       const words = s.split(/\s+/);
-      return words.map((w, wi) => {
-        if (wi === 0) return '<span class="word-current">' + w + '</span>';
-        return w;
-      }).join(' ');
+      inner = words.map((w, wi) => wi === 0 ? '<span class="word-current">' + w + '</span>' : w).join(' ');
+    } else {
+      inner = '<span style="color:var(--slate-400);">' + s + '</span>';
     }
-    return '<span style="color:var(--slate-400);">' + s + '</span>';
+    const classes = ['sentence-wrap'];
+    if (selectable) classes.push('sentence-selectable');
+    if (selectable && i === selectedSentenceIdx) classes.push('sentence-selected');
+    const handler = selectable ? ' onclick="selectSentence(' + i + ')"' : '';
+    return '<span class="' + classes.join(' ') + '"' + handler + '>' + inner + '</span>';
   }).join(' ');
+}
+
+function selectSentence(idx) {
+  if (readingPhase !== 'paused') return;
+  selectedSentenceIdx = idx;
+  renderPassageHighlight(currentSentenceIdx());
 }
 
 function stopRecording() {
