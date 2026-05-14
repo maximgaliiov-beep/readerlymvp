@@ -301,6 +301,11 @@
     color: var(--indigo-600); font-weight: 600;
   }
 
+  /* ===== COLD READING BANNER (slim — keep Listen/Read in viewport) ===== */
+  #screenReading .banner { padding: 12px 20px 14px; }
+  #screenReading .banner-with-brighty h2 { font-size: 16px; line-height: 1.3; font-weight: 600; }
+  #screenReading .banner-with-brighty .brighty--md { width: 36px; height: 36px; font-size: 20px; }
+
   /* ===== STORY IMAGE ===== */
   .story-image {
     width: 100%; max-width: 360px; margin: 0 auto 16px;
@@ -891,6 +896,13 @@
     .screen-content { padding: 40px 56px; }
     .banner { padding: 28px 56px 36px; }
     .screen-bottom { padding: 20px 56px 36px; }
+
+    /* Keep the Cold Reading banner slim on desktop too, so Listen + Read
+       buttons sit inside the viewport without scrolling. */
+    #screenReading .banner { padding: 14px 56px 16px; }
+    #screenReading .banner-with-brighty h2 { font-size: 18px; }
+    #screenReading .banner-with-brighty .brighty--md { width: 44px; height: 44px; font-size: 26px; }
+    #screenReading .screen-content { padding: 24px 56px; }
 
     /* Cold Reading: image left, passage + controls right.
        Sticky image so it stays visible if the passage scrolls. */
@@ -2023,7 +2035,7 @@ function resetReadingUI() {
   readingPhase = 'idle';
   selectedSentenceIdx = null;
   document.getElementById('readingTitle').innerHTML =
-    "Cold reading &#128214;<br>Listen first, or read it yourself.";
+    "Listen first, or read it yourself.";
   // Sentence 0 active, the rest dim — student hasn't started yet.
   renderPassageHighlight(0);
   // Reset accumulators so the next read starts clean.
