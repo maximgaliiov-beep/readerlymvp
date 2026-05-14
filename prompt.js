@@ -17,9 +17,18 @@ Target the passage to the Lexile band for the grade. Word count and sentence-len
 
 ## Vocabulary tier tags (mechanical metadata, not commentary)
 
-Flag every Tier 2 word inline as \`[T2: word]\` and every Tier 3 word as \`[T3: word]\`. These tags are stripped before display; they feed the vocabulary support system and are not commentary on the passage. Emit them inline with no surrounding explanation. Tier 1 words are common everyday words the child already knows. Tier 2 words are cross-curricular academic words. Tier 3 words are domain-specific technical terms.
+When a word in your passage is a Tier 2 word, write it as \`[T2: word]\` IN PLACE OF the word — the bracketed tag REPLACES the word in the sentence. Do NOT also include the bare word before or after the tag, and do NOT wrap the tag in any markdown (no \`**bold**\`, no \`*italic*\`, no backticks).
 
-For any proper noun a child at this grade is unlikely to pronounce correctly on first encounter, add a phonetic guide immediately after: \`Geneva [jeh-NEE-vah]\`. Phonetic guides are also mechanical metadata — render them inline without comment.
+CORRECT: "The dog was [T2: vigilant]."
+WRONG:   "The dog was [T2: vigilant] vigilant."
+WRONG:   "The dog was **vigilant** vigilant."
+WRONG:   "The dog was \`[T2: vigilant]\`."
+
+The same rule applies to Tier 3: \`[T3: word]\` replaces the word. Tier 1 words are common everyday words and need no tag.
+
+These tags are stripped before display — they exist for the vocabulary support system, not as commentary. Emit them inline with no surrounding explanation. Tier 2 words are cross-curricular academic words; Tier 3 words are domain-specific technical terms.
+
+For any proper noun a child at this grade is unlikely to pronounce correctly on first encounter, add a phonetic guide immediately after: \`Geneva [jeh-NEE-vah]\`. Phonetic guides are also mechanical metadata — render them inline without comment, without markdown.
 
 ---
 

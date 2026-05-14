@@ -1431,7 +1431,7 @@ async function goToGenerate() {
     currentImageUrl = null;
     currentImageStatus = 'loading';
     updateStoryImage();
-    generateStoryImage(currentSituation, currentRole)
+    generateStoryImage(currentSituation, currentLevel)
       .then(dataUrl => {
         currentImageUrl = dataUrl;
         currentImageStatus = 'ready';
@@ -1453,15 +1453,24 @@ async function goToGenerate() {
   }
 }
 
-// Generate a kid-friendly illustration that matches the passage's situation.
-// Runs in parallel with passage rendering — non-blocking. Updates UI as it lands.
-async function generateStoryImage(situation, role) {
+// Pick an illustration style that fits the grade band — childish K-2
+// illustrations aren't appropriate for 9-12.
+const IMAGE_STYLE_BY_GRADE = {
+  'K-2':  "Cute, simple picture-book illustration with friendly cartoon characters, soft rounded shapes, warm cheerful colors, like an early-reader storybook.",
+  '3-5':  "Vibrant middle-grade book illustration. More detailed than a picture book but still warm and approachable. Like a Roald Dahl or Magic Tree House cover.",
+  '6-8':  "Contemporary young-adult novel cover illustration. Stylized but grounded, atmospheric lighting, no cartoony or childish elements. Like a Rick Riordan or Wings of Fire cover.",
+  '9-12': "Sophisticated editorial illustration, like a New York Times Magazine cover. Mature artistic style, strong composition, evocative mood. Suitable for a high-school reader."
+};
+
+// Generate an illustration that matches the passage's situation, sized for the
+// 16:9 frame we render. Runs in parallel — non-blocking. Updates UI when it lands.
+async function generateStoryImage(situation, grade) {
+  const style = IMAGE_STYLE_BY_GRADE[grade] || IMAGE_STYLE_BY_GRADE['3-5'];
   const prompt = [
-    'Children\'s book illustration.',
+    style,
     `Subject: ${situation}.`,
-    'Style: bright, friendly, warm, simple shapes, kid-friendly characters.',
-    'Single-scene composition with clear focal point.',
-    'No text or letters anywhere in the image.'
+    'Landscape orientation, 16:9 aspect ratio, single-scene composition with one clear focal point.',
+    'No text, letters, words, or captions anywhere in the image.'
   ].join(' ');
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`;
   const res = await fetch(url, {
@@ -1520,6 +1529,9 @@ async function generatePassage(grade, role, situation) {
 function parseGeminiOutput(raw) {
   const tagged = [];
   const phonetic = {};
+  // Words emitted via a tier tag — used to safely collapse "[T2: word] word"
+  // duplicates without nuking intentional repetitions like "Hop, hop, hop!".
+  const taggedWordsLower = new Set();
   let text = raw.trim();
 
   // Phonetic guides: optional italic wrapper, then a word, then [letters-and-hyphens].
@@ -1533,12 +1545,35 @@ function parseGeminiOutput(raw) {
   text = text.replace(/\[T([23]):\s*([^\]]+)\]/g, (_, tier, word) => {
     const cleanWord = word.trim();
     tagged.push({ word: cleanWord, tier: parseInt(tier, 10) });
+    taggedWordsLower.add(cleanWord.toLowerCase());
     return cleanWord;
   });
 
-  // Strip stray markdown wrappers the model adds around tags.
-  text = text.replace(/`([^`\n]+)`/g, '$1');
-  text = text.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '$1');
+  // Strip stray markdown wrappers the model adds around tagged words.
+  // Track single-word wrapper contents so we can dedup them too (Gemini
+  // sometimes emits "**word** word" without the [T2:] tag at all).
+  const wrappedSingleWordsLower = new Set();
+  const trackWord = (m, content) => {
+    if (/^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'\-]*$/.test(content)) {
+      wrappedSingleWordsLower.add(content.toLowerCase());
+    }
+    return content;
+  };
+  text = text.replace(/`([^`\n]+)`/g, trackWord);
+  // Bold ** ... ** before italic so we don't eat the asterisks.
+  text = text.replace(/\*\*([^*\n]+?)\*\*/g, trackWord);
+  text = text.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, trackWord);
+
+  // Defensive dedup: when the model emits "[T2: word] word" or "**word** word"
+  // (it does, even with the prompt explicitly telling it not to), our strip
+  // step leaves "word word" sitting in the passage. Collapse adjacent identical
+  // words ONLY when the first one was sourced from a tier tag or a single-word
+  // markdown wrapper — preserves intentional repetition like "Hop, hop, hop!".
+  text = text.replace(/\b([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'\-]*)(\s+)\1\b/gi, (match, w1) => {
+    const lower = w1.toLowerCase();
+    if (taggedWordsLower.has(lower) || wrappedSingleWordsLower.has(lower)) return w1;
+    return match;
+  });
 
   return { displayText: text, tagged, phonetic };
 }
