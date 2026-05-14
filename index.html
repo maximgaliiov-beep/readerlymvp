@@ -1139,10 +1139,10 @@
     </div>
     <div class="screen-bottom hidden" id="resultsButtons">
       <div class="btn-row">
-        <button class="btn btn-primary hidden" id="btnContinueReading" onclick="continueReading()">Continue reading &#8594;</button>
+        <button class="btn btn-primary hidden" id="btnContinueReading" onclick="continueReading()">Continue where you left &#8594;</button>
         <button class="btn btn-outline hidden" id="btnReadAgain" onclick="readAgain()">Read it again &#128257;</button>
         <button class="btn btn-green hidden" id="btnPracticeNew" onclick="goToPractice()">Practice new words</button>
-        <button class="btn btn-primary hidden" id="btnNewText" onclick="tryNewText()">Try a new text &#8594;</button>
+        <button class="btn btn-outline hidden" id="btnNewText" onclick="tryNewText()">Choose new topic to read</button>
       </div>
     </div>
   </div>
@@ -2360,9 +2360,12 @@ function showResults() {
   resultsAction.classList.add('hidden');
   resultsButtons.classList.remove('hidden');
   btnContinueReading.classList.toggle('hidden', !hasUnread);
-  btnReadAgain.classList.toggle('hidden', hasUnread); // hide on partial — kid should continue, not restart
+  // On partial read: primary = Continue + secondary = Choose new topic.
+  //   (Read-again would discard progress; Practice-new is for after a full read.)
+  // On complete read: Read again, Practice tricky words (if any), Choose new topic.
+  btnReadAgain.classList.toggle('hidden', hasUnread);
   btnPracticeNew.classList.toggle('hidden', practiceWords.length === 0 || hasUnread);
-  btnNewText.classList.toggle('hidden', hasUnread);
+  btnNewText.classList.remove('hidden');
 
   previousScores = { ...scores };
   showScreen('screenResults');
