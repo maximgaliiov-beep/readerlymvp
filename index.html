@@ -2424,11 +2424,11 @@ function showResults() {
   resultsAction.classList.add('hidden');
   resultsButtons.classList.remove('hidden');
   btnContinueReading.classList.toggle('hidden', !hasUnread);
-  // On partial read: primary = Continue + secondary = Choose new topic.
-  //   (Read-again would discard progress; Practice-new is for after a full read.)
-  // On complete read: Read again, Practice tricky words (if any), Choose new topic.
+  // On partial read: Continue + Practice (if any tricky words) + Choose new topic.
+  //   (Read-again would discard progress.)
+  // On complete read: Read again, Practice (if any), Choose new topic.
   btnReadAgain.classList.toggle('hidden', hasUnread);
-  btnPracticeNew.classList.toggle('hidden', practiceWords.length === 0 || hasUnread);
+  btnPracticeNew.classList.toggle('hidden', practiceWords.length === 0);
   btnNewText.classList.remove('hidden');
 
   previousScores = { ...scores };
