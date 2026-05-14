@@ -958,27 +958,6 @@
     </div>
   </div>
 
-  <!-- ===== SCREEN: Get Ready ===== -->
-  <div class="screen" id="screenGetReady">
-    <div class="banner banner-indigo">
-      <div class="banner-with-brighty">
-        <div class="brighty brighty--md">&#128048;</div>
-        <div>
-          <h2>Here's your story &#128214;</h2>
-          <p>I made it just for you. Ready when you are!</p>
-        </div>
-      </div>
-    </div>
-    <div class="screen-content">
-      <div class="passage-card">
-        <div class="passage-label">&#128214; Your story:</div>
-        <div class="passage-text" id="getReadyPassageText"></div>
-      </div>
-    </div>
-    <div class="screen-bottom">
-      <button class="btn btn-primary" onclick="goToColdRead()">Let's read &#8594;</button>
-    </div>
-  </div>
 
   <!-- ===== SCREEN: Voice Pick ===== -->
   <div class="screen" id="screenVoicePick">
@@ -1003,7 +982,7 @@
       </div>
     </div>
     <div class="screen-bottom">
-      <button class="btn btn-primary" id="btnStartListen" onclick="showGetReady()">See my story &#8594;</button>
+      <button class="btn btn-primary" id="btnStartListen" onclick="goToColdRead()">Let's read &#8594;</button>
     </div>
   </div>
 
@@ -1470,12 +1449,6 @@ function applyPassage(parsed) {
   currentTaggedWords = parsed.tagged;
   currentPhoneticGuides = parsed.phonetic;
   sentences = currentText.match(/[^.!?\n]+[.!?]+|\S[^\n]*/g)?.map(s => s.trim()).filter(Boolean) || [currentText];
-}
-
-function showGetReady() {
-  if (typeof stopPreview === 'function') stopPreview();
-  document.getElementById('getReadyPassageText').innerHTML = currentText;
-  showScreen('screenGetReady');
 }
 
 function goToVoicePick() {
