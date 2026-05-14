@@ -138,6 +138,8 @@
   }
   .header-btn:hover { background: rgba(255,255,255,0.15); }
   .header-btn svg { width: 24px; height: 24px; }
+  .header-btn-back { padding: 6px 12px 6px 8px; gap: 4px; }
+  .header-btn-label { font-size: 14px; font-weight: 500; }
   .header-brand {
     display: flex; align-items: center; gap: 8px;
     font-size: 16px; font-weight: 600;
@@ -340,6 +342,20 @@
     outline: 2px dashed var(--indigo-500);
     outline-offset: 2px;
   }
+
+  /* ===== SETTINGS SCREEN (Grade + Role + Voice + Speed combined) ===== */
+  .settings-section { margin-bottom: 24px; }
+  .settings-section:last-child { margin-bottom: 0; }
+  .settings-label {
+    font-size: 13px; font-weight: 700; color: var(--slate-700);
+    text-transform: uppercase; letter-spacing: 0.6px;
+    margin-bottom: 10px;
+  }
+  .settings-sublabel {
+    font-size: 13px; font-weight: 600; color: var(--slate-600);
+    margin: 16px 0 8px;
+  }
+  .setting-sub { margin-top: 12px; }
 
   /* ===== ROLE PICKER ===== */
   .role-grid {
@@ -546,6 +562,7 @@
   .word-fair { background: var(--yellow-100); color: var(--yellow-700); }
   .word-poor { background: var(--red-100); color: var(--red-500); }
   .word-missed { background: var(--red-100); color: var(--red-500); text-decoration: line-through; }
+  .word-unread { color: var(--slate-400); background: transparent; }
 
   /* ===== MIC / STOP BUTTONS ===== */
   .action-area {
@@ -572,6 +589,14 @@
   .mic-btn-green:hover { background: var(--emerald-600); transform: scale(1.05); }
   .mic-btn-listen { background: var(--brighty-yellow); color: var(--slate-900); }
   .mic-btn-listen:hover:not(:disabled) { background: #f5c020; transform: scale(1.05); }
+  .mic-btn-listen-all { background: var(--amber-400); color: var(--slate-900); }
+  .mic-btn-listen-all:hover:not(:disabled) { background: var(--amber-500); transform: scale(1.05); }
+  .paused-hint {
+    background: var(--brighty-yellow-soft); border: 1px solid #facc15;
+    border-radius: 12px; padding: 10px 14px; margin-bottom: 14px;
+    font-size: 14px; color: var(--slate-700);
+    text-align: center;
+  }
   .mic-btn-pause { background: var(--amber-500); color: white; animation: mic-pulse 1.5s ease-in-out infinite; }
   .mic-btn-pause:hover:not(:disabled) { background: var(--amber-400); transform: scale(1.05); }
   .mic-btn-end { background: var(--slate-400); color: white; }
@@ -868,8 +893,9 @@
 <div class="app">
   <!-- Header -->
   <div class="header">
-    <button class="header-btn" id="btnBack" onclick="goBack()">
+    <button class="header-btn header-btn-back" id="btnBack" onclick="goBack()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+      <span class="header-btn-label">Settings</span>
     </button>
     <div class="header-brand">
       <div class="header-logo">&#128048;</div>
@@ -902,80 +928,80 @@
   </div>
 
   <!-- ===== SCREEN 1: Grade Selection ===== -->
-  <div class="screen" id="screenGrade">
+  <div class="screen" id="screenSettings">
     <div class="banner banner-indigo">
       <div class="banner-with-brighty">
         <div class="brighty brighty--md">&#128048;</div>
-        <h2>What grade are you in?</h2>
+        <div>
+          <h2>Choose your settings</h2>
+          <p>Pick your grade, story type, and reading buddy.</p>
+        </div>
       </div>
     </div>
     <div class="screen-content">
-      <div class="grade-center">
-        <div class="grade-title">Choose your grade</div>
+      <div class="settings-section">
+        <div class="settings-label">Your grade</div>
         <div class="grade-grid">
           <div class="grade-card" data-level="K-2" onclick="selectGrade(this)">K - Grade 2</div>
           <div class="grade-card" data-level="3-5" onclick="selectGrade(this)">Grade 3-5</div>
           <div class="grade-card" data-level="6-8" onclick="selectGrade(this)">Grade 6-8</div>
         </div>
       </div>
-    </div>
-    <div class="screen-bottom">
-      <button class="btn btn-primary" id="btnContinue" onclick="goToRole()" disabled>Continue &#8594;</button>
-    </div>
-  </div>
-
-  <!-- ===== SCREEN: Role ===== -->
-  <div class="screen" id="screenRole">
-    <div class="banner banner-indigo">
-      <div class="banner-with-brighty">
-        <div class="brighty brighty--md">&#128048;</div>
-        <div>
-          <h2>Pick your adventure</h2>
-          <p>What kind of reading sounds fun today?</p>
+      <div class="settings-section">
+        <div class="settings-label">Story type</div>
+        <div class="role-grid">
+          <div class="role-card" data-role="Narrate an audiobook" onclick="selectRole(this)">
+            <div class="role-emoji">&#128214;</div>
+            <div class="role-text">
+              <div class="role-title">Narrate an audiobook</div>
+              <div class="role-desc">A story to read aloud</div>
+            </div>
+          </div>
+          <div class="role-card" data-role="Host a podcast" onclick="selectRole(this)">
+            <div class="role-emoji">&#127908;</div>
+            <div class="role-text">
+              <div class="role-title">Host a podcast</div>
+              <div class="role-desc">Talk to a listener</div>
+            </div>
+          </div>
+          <div class="role-card" data-role="Give a talk" onclick="selectRole(this)">
+            <div class="role-emoji">&#127897;&#65039;</div>
+            <div class="role-text">
+              <div class="role-title">Give a talk</div>
+              <div class="role-desc">Persuade the room</div>
+            </div>
+          </div>
+          <div class="role-card" data-role="Teach a lesson" onclick="selectRole(this)">
+            <div class="role-emoji">&#127822;</div>
+            <div class="role-text">
+              <div class="role-title">Teach a lesson</div>
+              <div class="role-desc">Explain how something works</div>
+            </div>
+          </div>
+          <div class="role-card" data-role="Perform a scene" onclick="selectRole(this)">
+            <div class="role-emoji">&#127917;&#65039;</div>
+            <div class="role-text">
+              <div class="role-title">Perform a scene</div>
+              <div class="role-desc">Step into a character</div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="screen-content">
-      <div class="role-grid">
-        <div class="role-card" data-role="Narrate an audiobook" onclick="selectRole(this)">
-          <div class="role-emoji">&#128214;</div>
-          <div class="role-text">
-            <div class="role-title">Narrate an audiobook</div>
-            <div class="role-desc">A story to read aloud</div>
-          </div>
-        </div>
-        <div class="role-card" data-role="Host a podcast" onclick="selectRole(this)">
-          <div class="role-emoji">&#127908;</div>
-          <div class="role-text">
-            <div class="role-title">Host a podcast</div>
-            <div class="role-desc">Talk to a listener</div>
-          </div>
-        </div>
-        <div class="role-card" data-role="Give a talk" onclick="selectRole(this)">
-          <div class="role-emoji">&#127897;&#65039;</div>
-          <div class="role-text">
-            <div class="role-title">Give a talk</div>
-            <div class="role-desc">Persuade the room</div>
-          </div>
-        </div>
-        <div class="role-card" data-role="Teach a lesson" onclick="selectRole(this)">
-          <div class="role-emoji">&#127822;</div>
-          <div class="role-text">
-            <div class="role-title">Teach a lesson</div>
-            <div class="role-desc">Explain how something works</div>
-          </div>
-        </div>
-        <div class="role-card" data-role="Perform a scene" onclick="selectRole(this)">
-          <div class="role-emoji">&#127917;&#65039;</div>
-          <div class="role-text">
-            <div class="role-title">Perform a scene</div>
-            <div class="role-desc">Step into a character</div>
+      <div class="settings-section">
+        <div class="settings-label">Reading buddy</div>
+        <div class="voice-grid" id="voicePickerGrid"></div>
+        <div class="setting-sub">
+          <div class="settings-sublabel">Reading speed</div>
+          <div class="speed-row">
+            <span class="speed-icon" aria-label="slow">&#128034;</span>
+            <input type="range" class="speed-slider" id="speedSlider" min="0" max="100" value="50" oninput="setSpeed(this.value)">
+            <span class="speed-icon" aria-label="fast">&#128007;</span>
           </div>
         </div>
       </div>
     </div>
     <div class="screen-bottom">
-      <button class="btn btn-primary" id="btnRoleContinue" onclick="pickRandomAndGenerate()" disabled>Make my story &#8594;</button>
+      <button class="btn btn-primary" id="btnMakeStory" onclick="pickRandomAndGenerate()" disabled>Make my story &#8594;</button>
     </div>
   </div>
 
@@ -994,39 +1020,13 @@
     </div>
     <div class="screen-bottom hidden" id="generatingActions">
       <div class="btn-row">
-        <button class="btn btn-outline" onclick="goToRole()">&#8592; Pick again</button>
+        <button class="btn btn-outline" onclick="goToSettings()">&#8592; Change settings</button>
         <button class="btn btn-primary" onclick="pickRandomAndGenerate()">Try again</button>
       </div>
     </div>
   </div>
 
 
-  <!-- ===== SCREEN: Voice Pick ===== -->
-  <div class="screen" id="screenVoicePick">
-    <div class="banner banner-indigo">
-      <div class="banner-with-brighty">
-        <div class="brighty brighty--md">&#128048;</div>
-        <div>
-          <h2>Pick your reading buddy &#127908;</h2>
-          <p>Tap a buddy to hear them say hi!</p>
-        </div>
-      </div>
-    </div>
-    <div class="screen-content">
-      <div class="voice-grid" id="voicePickerGrid"></div>
-      <div class="setting-block">
-        <div class="setting-label">Reading speed</div>
-        <div class="speed-row">
-          <span class="speed-icon" aria-label="slow">&#128034;</span>
-          <input type="range" class="speed-slider" id="speedSlider" min="0" max="100" value="50" oninput="setSpeed(this.value)">
-          <span class="speed-icon" aria-label="fast">&#128007;</span>
-        </div>
-      </div>
-    </div>
-    <div class="screen-bottom">
-      <button class="btn btn-primary" id="btnStartListen" onclick="goToColdRead()">Let's read &#8594;</button>
-    </div>
-  </div>
 
   <!-- ===== SCREEN: Listen ===== -->
 
@@ -1040,6 +1040,7 @@
     </div>
     <div class="screen-content">
       <div class="story-image is-loading" id="storyImage"></div>
+      <div class="paused-hint hidden" id="pausedHint">&#128161; Tap a sentence to hear it again, or tap <strong>Listen all</strong> for the whole story.</div>
       <div class="passage-card">
         <div class="passage-label">&#128214; Your passage:</div>
         <div class="passage-text" id="passageText"></div>
@@ -1076,16 +1077,22 @@
           <button class="mic-btn mic-btn-end" onclick="endReading()">
             <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
           </button>
-          <div class="action-label">End</div>
+          <div class="action-label">Finish reading</div>
         </div>
       </div>
       <!-- Paused: Listen current + Resume + End -->
       <div class="dual-actions hidden" id="actionsPaused">
         <div class="action-pair">
-          <button class="mic-btn mic-btn-listen" onclick="listenCurrentSentence()">
+          <button class="mic-btn mic-btn-listen" id="btnListenSelected" onclick="listenCurrentSentence()">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
           </button>
           <div class="action-label action-label-yellow">Listen this</div>
+        </div>
+        <div class="action-pair">
+          <button class="mic-btn mic-btn-listen-all" id="btnListenAll" onclick="listenWholeText()" title="Listen to the whole story">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+          </button>
+          <div class="action-label action-label-yellow">Listen all</div>
         </div>
         <div class="action-pair">
           <button class="mic-btn mic-btn-green" id="btnResume" onclick="resumeReading()">
@@ -1097,7 +1104,7 @@
           <button class="mic-btn mic-btn-end" onclick="endReading()">
             <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
           </button>
-          <div class="action-label">End</div>
+          <div class="action-label">Finish reading</div>
         </div>
       </div>
     </div>
@@ -1132,6 +1139,7 @@
     </div>
     <div class="screen-bottom hidden" id="resultsButtons">
       <div class="btn-row">
+        <button class="btn btn-primary hidden" id="btnContinueReading" onclick="continueReading()">Continue reading &#8594;</button>
         <button class="btn btn-outline hidden" id="btnReadAgain" onclick="readAgain()">Read it again &#128257;</button>
         <button class="btn btn-green hidden" id="btnPracticeNew" onclick="goToPractice()">Practice new words</button>
         <button class="btn btn-primary hidden" id="btnNewText" onclick="tryNewText()">Try a new text &#8594;</button>
@@ -1288,6 +1296,8 @@ function showActionsState(state) {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('hidden', id !== ('actions' + state));
   });
+  const hint = document.getElementById('pausedHint');
+  if (hint) hint.classList.toggle('hidden', state !== 'Paused');
 }
 let sentences = [];
 let recognizer = null;
@@ -1368,31 +1378,48 @@ function skipOnboarding() {
   sessionTexts = [];
   sessionWordsPracticed = [];
   sessionWordsWithErrors = [];
-  showScreen('screenGrade');
+  goToSettings();
 }
 
-// ===== ADVENTURE PICKER =====
+// ===== SETTINGS (Grade + Role + Voice + Speed merged) =====
+function goToSettings() {
+  // Restore prior choices so the kid doesn't have to re-pick every session.
+  const savedGrade = localStorage.getItem('readerly_grade');
+  const savedRole = localStorage.getItem('readerly_role');
+  if (savedGrade) currentLevel = savedGrade;
+  if (savedRole) currentRole = savedRole;
+  document.querySelectorAll('#screenSettings .grade-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.level === currentLevel);
+  });
+  document.querySelectorAll('#screenSettings .role-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.role === currentRole);
+  });
+  renderVoicePicker();
+  const slider = document.getElementById('speedSlider');
+  if (slider) slider.value = currentSpeed;
+  updateMakeStoryButton();
+  showScreen('screenSettings');
+}
+
+function updateMakeStoryButton() {
+  const btn = document.getElementById('btnMakeStory');
+  if (btn) btn.disabled = !(currentLevel && currentRole);
+}
+
 function selectGrade(el) {
   document.querySelectorAll('.grade-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   currentLevel = el.dataset.level;
-  document.getElementById('btnContinue').disabled = false;
-}
-
-function goToRole() {
-  if (!currentLevel) return;
-  // Reset role state when re-entering
-  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
-  currentRole = null;
-  document.getElementById('btnRoleContinue').disabled = true;
-  showScreen('screenRole');
+  localStorage.setItem('readerly_grade', currentLevel);
+  updateMakeStoryButton();
 }
 
 function selectRole(el) {
   document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   currentRole = el.dataset.role;
-  document.getElementById('btnRoleContinue').disabled = false;
+  localStorage.setItem('readerly_role', currentRole);
+  updateMakeStoryButton();
 }
 
 // Pick a random situation from the curated list for the chosen role.
@@ -1437,7 +1464,7 @@ async function goToGenerate() {
         currentImageStatus = 'error';
         updateStoryImage();
       });
-    goToVoicePick();
+    goToColdRead();
   } catch (err) {
     console.error('Gemini error:', err);
     const errEl = document.getElementById('generatingError');
@@ -1577,13 +1604,6 @@ function applyPassage(parsed) {
   currentTaggedWords = parsed.tagged;
   currentPhoneticGuides = parsed.phonetic;
   sentences = currentText.match(/[^.!?\n]+[.!?]+|\S[^\n]*/g)?.map(s => s.trim()).filter(Boolean) || [currentText];
-}
-
-function goToVoicePick() {
-  renderVoicePicker();
-  const slider = document.getElementById('speedSlider');
-  if (slider) slider.value = currentSpeed;
-  showScreen('screenVoicePick');
 }
 
 function goToColdRead() {
@@ -1859,6 +1879,58 @@ function _playListenBuffer(audioData, myRun, wasIdle, onDone) {
     console.error('Listen play failed:', err);
     onDone();
   });
+}
+
+// "Listen whole text" — only available from the paused state. AI reads the
+// entire passage in the chosen voice. Stays paused at the end so the kid
+// can resume or pick a different sentence.
+function listenWholeText() {
+  if (readingPhase !== 'paused' || !window.SpeechSDK) return;
+  stopNarration();
+  stopPreview();
+
+  document.querySelectorAll('#readingAction .mic-btn').forEach(b => b.disabled = true);
+  document.getElementById('btnListenAll')?.classList.add('is-playing');
+
+  narrationState.runId++;
+  const myRun = narrationState.runId;
+  narrationState.active = true;
+
+  const voice = getVoice(currentVoiceId);
+  const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
+  speechConfig.speechSynthesisVoiceName = voice.id;
+  speechConfig.speechSynthesisOutputFormat =
+    SpeechSDK.SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
+
+  const sinkStream = SpeechSDK.PullAudioOutputStream.create();
+  const audioConfig = SpeechSDK.AudioConfig.fromStreamOutput(sinkStream);
+  const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
+  narrationState.synthesizer = synthesizer;
+
+  const ssml = buildSsml(currentText, voice);
+  const onDone = () => {
+    document.querySelectorAll('#readingAction .mic-btn').forEach(b => b.disabled = false);
+    document.getElementById('btnListenAll')?.classList.remove('is-playing');
+  };
+
+  synthesizer.speakSsmlAsync(
+    ssml,
+    (result) => {
+      try { synthesizer.close(); } catch (_) {}
+      if (myRun !== narrationState.runId) return;
+      if (result.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
+        _playListenBuffer(result.audioData, myRun, /*wasIdle=*/false, onDone);
+      } else {
+        console.error('Listen-all synthesis failed:', result.errorDetails || result.reason);
+        onDone();
+      }
+    },
+    (err) => {
+      try { synthesizer.close(); } catch (_) {}
+      console.error('Listen-all error:', err);
+      if (myRun === narrationState.runId) onDone();
+    }
+  );
 }
 
 function stopNarration() {
@@ -2201,10 +2273,20 @@ function showResults() {
     assessedQueue[key].push(w);
   });
 
+  // Render word-by-word results. Words past the point where the kid stopped
+  // reading are shown unhighlighted (not marked as Omission/missed) and don't
+  // pollute the practice-words list — they weren't even attempted.
+  const stopWordIdx = wordsHeard; // approximation: # of words actually recognized
   let resultsHtml = '';
   practiceWords = [];
   const currentWordResults = [];
-  refWords.forEach(refWord => {
+  refWords.forEach((refWord, idx) => {
+    const isUnread = idx >= stopWordIdx;
+    if (isUnread) {
+      resultsHtml += '<span class="word-span word-unread">' + refWord + '</span> ';
+      currentWordResults.push({ word: refWord, score: null, errorType: 'NotRead', cls: 'word-unread' });
+      return;
+    }
     const clean = refWord.toLowerCase().replace(/[^a-z']/g, '');
     let wordData = assessedQueue[clean]?.shift() || null;
     if (wordData) {
@@ -2227,6 +2309,7 @@ function showResults() {
     }
   });
   document.getElementById('resultsText').innerHTML = resultsHtml;
+  const hasUnread = stopWordIdx < refWords.length;
 
   // Track errors in session
   practiceWords.forEach(w => {
@@ -2265,18 +2348,21 @@ function showResults() {
     chipsEl.innerHTML = '';
   }
 
-  // Bottom actions — single read flow: re-read, practice tricky words, or move on.
+  // Bottom actions: if the kid stopped early, primary CTA is "Continue reading"
+  // so they can finish; otherwise the usual re-read / practice / new text trio.
   const resultsAction = document.getElementById('resultsAction');
   const resultsButtons = document.getElementById('resultsButtons');
+  const btnContinueReading = document.getElementById('btnContinueReading');
   const btnReadAgain = document.getElementById('btnReadAgain');
   const btnPracticeNew = document.getElementById('btnPracticeNew');
   const btnNewText = document.getElementById('btnNewText');
 
   resultsAction.classList.add('hidden');
   resultsButtons.classList.remove('hidden');
-  btnReadAgain.classList.remove('hidden');
-  btnPracticeNew.classList.toggle('hidden', practiceWords.length === 0);
-  btnNewText.classList.remove('hidden');
+  btnContinueReading.classList.toggle('hidden', !hasUnread);
+  btnReadAgain.classList.toggle('hidden', hasUnread); // hide on partial — kid should continue, not restart
+  btnPracticeNew.classList.toggle('hidden', practiceWords.length === 0 || hasUnread);
+  btnNewText.classList.toggle('hidden', hasUnread);
 
   previousScores = { ...scores };
   showScreen('screenResults');
@@ -2307,6 +2393,17 @@ function spawnConfetti() {
 function readAgain() {
   previousScores = null;
   goToColdRead();
+}
+
+// "Continue reading" — from the results screen, return to the reading view
+// without resetting accumulators so the kid picks up where they stopped.
+async function continueReading() {
+  readingPhase = 'reading';
+  isReading = true;
+  showScreen('screenReading');
+  showActionsState('Reading');
+  // Don't reset allRecognizedText / finalPronScores — Azure continues from there.
+  await _initRecognizer();
 }
 
 // ===== WORD PRACTICE =====
@@ -2540,13 +2637,13 @@ function goBackToResults() {
 
 // ===== RE-READ & NEW TEXT =====
 function readSameText() {
-  screenHistory = ['screenGrade'];
+  screenHistory = ['screenSettings'];
   showScreen('screenReading');
   resetReadingUI();
 }
 
 function tryNewText() {
-  screenHistory = ['screenGrade'];
+  screenHistory = ['screenSettings'];
   pickRandomAndGenerate();
 }
 
@@ -2692,7 +2789,7 @@ function closeSummary() {
   sessionWordsWithErrors = [];
   onboardStep = 0;
   screenHistory = [];
-  showScreen('screenGrade');
+  goToSettings();
 }
 
 // ===== LIVE VOICE VISUALIZER =====
