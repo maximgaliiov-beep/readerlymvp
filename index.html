@@ -333,6 +333,14 @@
     width: 100%; height: 100%; object-fit: cover; display: block;
   }
 
+  /* ===== CHUNK PAGINATION INDICATOR ===== */
+  .chunk-indicator {
+    margin-top: 14px; padding-top: 10px;
+    border-top: 1px dashed var(--slate-200);
+    font-size: 13px; font-weight: 500; color: var(--slate-500);
+    text-align: right;
+  }
+
   /* ===== SELECTABLE SENTENCES (paused state) ===== */
   .sentence-wrap {
     display: inline; padding: 2px 4px; margin: 0 -4px;
@@ -2234,10 +2242,30 @@ function currentSentenceIdx() {
   return sentences.length - 1;
 }
 
+// Chunked rendering — show only CHUNK_SIZE sentences at a time so the page
+// stays short and the action buttons stay visible. The view auto-advances
+// once recognition crosses into the next chunk.
+const CHUNK_SIZE = 3;
+function chunkIdxForSentence(idx) {
+  return Math.max(0, Math.floor(Math.min(idx, sentences.length - 1) / CHUNK_SIZE));
+}
+function chunkBounds(chunkIdx) {
+  const start = chunkIdx * CHUNK_SIZE;
+  return { start, end: Math.min(start + CHUNK_SIZE, sentences.length) };
+}
+function totalChunks() {
+  return Math.max(1, Math.ceil(sentences.length / CHUNK_SIZE));
+}
+
 function renderPassageHighlight(activeSentenceIdx) {
   const el = document.getElementById('passageText');
   const selectable = readingPhase === 'paused';
-  el.innerHTML = sentences.map((s, i) => {
+  const chunkIdx = chunkIdxForSentence(activeSentenceIdx);
+  const { start, end } = chunkBounds(chunkIdx);
+
+  const parts = [];
+  for (let i = start; i < end; i++) {
+    const s = sentences[i];
     let inner;
     if (i < activeSentenceIdx) {
       inner = '<span style="color:var(--emerald-500);">' + s + '</span>';
@@ -2251,12 +2279,22 @@ function renderPassageHighlight(activeSentenceIdx) {
     if (selectable) classes.push('sentence-selectable');
     if (selectable && i === selectedSentenceIdx) classes.push('sentence-selected');
     const handler = selectable ? ' onclick="selectSentence(' + i + ')"' : '';
-    return '<span class="' + classes.join(' ') + '"' + handler + '>' + inner + '</span>';
-  }).join(' ');
+    parts.push('<span class="' + classes.join(' ') + '"' + handler + '>' + inner + '</span>');
+  }
+  let html = parts.join(' ');
+  const total = totalChunks();
+  if (total > 1) {
+    html += '<div class="chunk-indicator">Part ' + (chunkIdx + 1) + ' of ' + total + '</div>';
+  }
+  el.innerHTML = html;
 }
 
 function selectSentence(idx) {
   if (readingPhase !== 'paused') return;
+  // Bound to the chunk the kid is currently on — outside-chunk sentences
+  // aren't visible anyway, but be defensive.
+  const { start, end } = chunkBounds(chunkIdxForSentence(currentSentenceIdx()));
+  if (idx < start || idx >= end) return;
   selectedSentenceIdx = idx;
   renderPassageHighlight(currentSentenceIdx());
 }
