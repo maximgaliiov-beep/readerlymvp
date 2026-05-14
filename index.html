@@ -529,6 +529,10 @@
   .mic-btn-green:hover { background: var(--emerald-600); transform: scale(1.05); }
   .mic-btn-listen { background: var(--brighty-yellow); color: var(--slate-900); }
   .mic-btn-listen:hover:not(:disabled) { background: #f5c020; transform: scale(1.05); }
+  .mic-btn-pause { background: var(--amber-500); color: white; animation: mic-pulse 1.5s ease-in-out infinite; }
+  .mic-btn-pause:hover:not(:disabled) { background: var(--amber-400); transform: scale(1.05); }
+  .mic-btn-end { background: var(--slate-400); color: white; }
+  .mic-btn-end:hover:not(:disabled) { background: var(--slate-500); transform: scale(1.05); }
   .mic-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
   .mic-btn-listen.is-playing { animation: mic-pulse-yellow 1.5s ease-in-out infinite; }
   @keyframes mic-pulse-yellow {
@@ -1023,18 +1027,55 @@
       <div class="word-counter hidden" id="wordCounter"></div>
     </div>
     <div class="action-area" id="readingAction">
-      <div class="dual-actions">
-        <div class="action-pair" id="listenPair">
-          <button class="mic-btn mic-btn-listen" id="btnListenFirst" onclick="listenFirst()">
+      <!-- Idle: Listen first + Read -->
+      <div class="dual-actions" id="actionsIdle">
+        <div class="action-pair">
+          <button class="mic-btn mic-btn-listen" id="btnListenFirst" onclick="listenCurrentSentence()">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
           </button>
           <div class="action-label action-label-yellow" id="listenLabel">Listen first</div>
         </div>
         <div class="action-pair">
-          <button class="mic-btn mic-btn-record" id="btnMic" onclick="startReading()">
+          <button class="mic-btn mic-btn-record" id="btnStartRead" onclick="startReading()">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
           </button>
-          <div class="action-label" id="micLabel">Read it</div>
+          <div class="action-label">Read it</div>
+        </div>
+      </div>
+      <!-- Reading: Pause + End -->
+      <div class="dual-actions hidden" id="actionsReading">
+        <div class="action-pair">
+          <button class="mic-btn mic-btn-pause" id="btnPause" onclick="pauseReading()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+          </button>
+          <div class="action-label action-label-red">Pause</div>
+        </div>
+        <div class="action-pair">
+          <button class="mic-btn mic-btn-end" onclick="endReading()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+          </button>
+          <div class="action-label">End</div>
+        </div>
+      </div>
+      <!-- Paused: Listen current + Resume + End -->
+      <div class="dual-actions hidden" id="actionsPaused">
+        <div class="action-pair">
+          <button class="mic-btn mic-btn-listen" onclick="listenCurrentSentence()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+          </button>
+          <div class="action-label action-label-yellow">Listen this</div>
+        </div>
+        <div class="action-pair">
+          <button class="mic-btn mic-btn-green" id="btnResume" onclick="resumeReading()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <div class="action-label action-label-green">Resume</div>
+        </div>
+        <div class="action-pair">
+          <button class="mic-btn mic-btn-end" onclick="endReading()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+          </button>
+          <div class="action-label">End</div>
         </div>
       </div>
     </div>
@@ -1215,8 +1256,17 @@ let currentText = '';
 let currentTaggedWords = []; // [{word, tier: 2|3, phonetic?: string}]
 let currentPhoneticGuides = {}; // { word: 'pho-NEH-tik' }
 let readingStartTime = null;
+// 'idle' (haven't started or just reset), 'reading' (mic on), 'paused' (mic off mid-passage).
+let readingPhase = 'idle';
 // Tracks the most recent read so the results screen can show WPM + words.
 let lastRead = null;
+
+function showActionsState(state) {
+  ['actionsIdle', 'actionsReading', 'actionsPaused'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', id !== ('actions' + state));
+  });
+}
 let sentences = [];
 let recognizer = null;
 let isReading = false;
@@ -1601,22 +1651,27 @@ function previewVoice(voiceId) {
 // <audio> element we own. This gives us real pause/resume/stop, and ensures
 // "Skip listening" actually silences audio (Azure's auto-play buffers chunks
 // that the synthesizer's close() doesn't always interrupt).
-// "Listen first" — AI reads only sentence 1 + "Now you read it.", then
-// auto-activates the microphone so the student picks up where Brighty left off.
-function listenFirst() {
+// Listen demo of the CURRENT sentence (the one the kid is on, computed from
+// recognition progress). Auto-resumes mic if called from paused state, or
+// auto-starts mic if called from idle state.
+function listenCurrentSentence() {
   if (!sentences.length || !window.SpeechSDK) {
-    startReading();
+    if (readingPhase === 'idle') startReading();
+    else if (readingPhase === 'paused') resumeReading();
     return;
   }
   stopNarration();
   stopPreview();
 
-  const btnListen = document.getElementById('btnListenFirst');
-  const btnMic = document.getElementById('btnMic');
-  btnListen.disabled = true;
-  btnMic.disabled = true;
-  btnListen.classList.add('is-playing');
-  document.getElementById('listenLabel').textContent = "Brighty's reading...";
+  // Capture which mode we entered from so we can hand back correctly.
+  const wasPaused = readingPhase === 'paused';
+  const wasIdle = readingPhase === 'idle';
+  const sentenceIdx = currentSentenceIdx();
+  const sentence = sentences[sentenceIdx];
+
+  // Disable all action buttons during demo.
+  document.querySelectorAll('#readingAction .mic-btn').forEach(b => b.disabled = true);
+  document.querySelectorAll('#readingAction .mic-btn-listen').forEach(b => b.classList.add('is-playing'));
 
   narrationState.runId++;
   const myRun = narrationState.runId;
@@ -1628,8 +1683,6 @@ function listenFirst() {
   speechConfig.speechSynthesisOutputFormat =
     SpeechSDK.SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
 
-  // Sink output stream — never play to default speaker. We render through our
-  // own <audio> element so stop/skip actually cuts audio.
   const sinkStream = SpeechSDK.PullAudioOutputStream.create();
   const audioConfig = SpeechSDK.AudioConfig.fromStreamOutput(sinkStream);
   const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
@@ -1638,14 +1691,21 @@ function listenFirst() {
   const rate = speedToSsmlRate(currentSpeed);
   const styleOpen  = voice.style ? `<mstts:express-as style="${voice.style}">` : '';
   const styleClose = voice.style ? `</mstts:express-as>` : '';
-  const sentenceSafe = escapeForSsml(sentences[0]);
+  const sentenceSafe = escapeForSsml(sentence);
+  // Append "Now you read it." only when handing the mic to the student.
+  const tail = (wasIdle || wasPaused) ? '<break time="600ms"/>Now you read it.' : '';
   const ssml = [
     '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis"',
     ' xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="en-US">',
     `<voice name="${voice.id}">`, styleOpen,
-      `<prosody rate="${rate}">${sentenceSafe}<break time="600ms"/>Now you read it.</prosody>`,
+      `<prosody rate="${rate}">${sentenceSafe}${tail}</prosody>`,
     styleClose, '</voice></speak>'
   ].join('');
+
+  const onDone = () => {
+    document.querySelectorAll('#readingAction .mic-btn').forEach(b => b.disabled = false);
+    document.querySelectorAll('#readingAction .mic-btn-listen').forEach(b => b.classList.remove('is-playing'));
+  };
 
   synthesizer.speakSsmlAsync(
     ssml,
@@ -1653,22 +1713,22 @@ function listenFirst() {
       try { synthesizer.close(); } catch (_) {}
       if (myRun !== narrationState.runId) return;
       if (result.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
-        playListenFirstBuffer(result.audioData, myRun);
+        _playListenBuffer(result.audioData, myRun, wasIdle, wasPaused, onDone);
       } else {
-        console.error('Listen-first synthesis failed:', result.errorDetails || result.reason);
-        restoreListenButtons();
+        console.error('Listen synthesis failed:', result.errorDetails || result.reason);
+        onDone();
       }
     },
     (err) => {
       try { synthesizer.close(); } catch (_) {}
-      console.error('Listen-first error:', err);
-      if (myRun === narrationState.runId) restoreListenButtons();
+      console.error('Listen error:', err);
+      if (myRun === narrationState.runId) onDone();
     }
   );
 }
 
-function playListenFirstBuffer(audioData, myRun) {
-  if (myRun !== narrationState.runId) return;
+function _playListenBuffer(audioData, myRun, wasIdle, wasPaused, onDone) {
+  if (myRun !== narrationState.runId) { onDone(); return; }
   const blob = new Blob([audioData], { type: 'audio/wav' });
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
@@ -1676,29 +1736,21 @@ function playListenFirstBuffer(audioData, myRun) {
   narrationState.audioUrl = url;
 
   audio.onended = () => {
-    if (myRun !== narrationState.runId) return;
+    if (myRun !== narrationState.runId) { onDone(); return; }
     narrationState.active = false;
-    restoreListenButtons();
-    startReading(); // auto-hand-off to the student's read
+    onDone();
+    // Hand off to student: auto-start (idle) or auto-resume (paused).
+    if (wasIdle) startReading();
+    else if (wasPaused) resumeReading();
   };
   audio.onerror = (e) => {
-    console.error('Listen-first audio error:', e);
-    if (myRun === narrationState.runId) restoreListenButtons();
+    console.error('Listen audio error:', e);
+    if (myRun === narrationState.runId) onDone();
   };
   audio.play().catch(err => {
-    console.error('Listen-first play failed:', err);
-    restoreListenButtons();
+    console.error('Listen play failed:', err);
+    onDone();
   });
-}
-
-function restoreListenButtons() {
-  const btnListen = document.getElementById('btnListenFirst');
-  const btnMic = document.getElementById('btnMic');
-  if (!btnListen) return;
-  btnListen.disabled = false;
-  btnMic.disabled = false;
-  btnListen.classList.remove('is-playing');
-  document.getElementById('listenLabel').textContent = 'Listen first';
 }
 
 function stopNarration() {
@@ -1730,25 +1782,26 @@ function pickPassage() {
 }
 
 function resetReadingUI() {
+  readingPhase = 'idle';
   document.getElementById('readingTitle').innerHTML =
     "Cold reading &#128214;<br>Listen first, or read it yourself.";
-  // Render with sentence 0 active and the rest dim — user hasn't started reading yet.
+  // Sentence 0 active, the rest dim — student hasn't started yet.
   renderPassageHighlight(0);
-  // Restore the dual action buttons (Listen + Mic).
-  document.getElementById('listenPair').classList.remove('hidden');
+  // Reset accumulators so the next read starts clean.
+  allRecognizedWords = [];
+  allRecognizedText = '';
+  finalPronScores = { accuracy: 0, fluency: 0, completeness: 0, prosody: 0, overall: 0 };
+  pronScoreWeights = 0;
+  // Reset Idle UI.
   const btnListen = document.getElementById('btnListenFirst');
   btnListen.classList.remove('is-playing');
   btnListen.disabled = false;
   document.getElementById('listenLabel').textContent = 'Listen first';
-  document.getElementById('btnMic').className = 'mic-btn mic-btn-record';
-  document.getElementById('btnMic').innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
-  document.getElementById('btnMic').onclick = startReading;
-  document.getElementById('btnMic').disabled = false;
-  document.getElementById('micLabel').textContent = 'Read it';
-  document.getElementById('micLabel').className = 'action-label';
+  document.getElementById('btnStartRead').disabled = false;
   document.getElementById('wordCounter').classList.add('hidden');
   document.getElementById('voiceHint').textContent = '';
   initStaticVisualizer('voiceVisualizer');
+  showActionsState('Idle');
 }
 
 function initStaticVisualizer(containerId) {
@@ -1764,33 +1817,78 @@ function initStaticVisualizer(containerId) {
 }
 
 // ===== READING & SPEECH =====
+// startReading() = fresh begin from idle. resumeReading() = continue after pause
+// (no accumulator reset). Both call _initRecognizer() to spin up Azure.
+
 async function startReading() {
+  if (readingPhase === 'paused') return resumeReading();
+  readingPhase = 'reading';
   readingStartTime = Date.now();
   allRecognizedWords = [];
   allRecognizedText = '';
   finalPronScores = { accuracy: 0, fluency: 0, completeness: 0, prosody: 0, overall: 0 };
   pronScoreWeights = 0;
   isReading = true;
-
-  // Switch to recording UI — hide Listen, transform Mic into Stop.
-  document.getElementById('listenPair').classList.add('hidden');
-  document.getElementById('btnMic').className = 'mic-btn mic-btn-stop';
-  document.getElementById('btnMic').innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 6L6 18M6 6l12 12" stroke="white" stroke-width="3" stroke-linecap="round" fill="none"/></svg>';
-  document.getElementById('btnMic').onclick = finishReading;
-  document.getElementById('micLabel').textContent = 'Stop';
-  document.getElementById('micLabel').className = 'action-label action-label-red';
   document.getElementById('wordCounter').classList.remove('hidden');
   document.getElementById('wordCounter').textContent = '0 / ' + currentText.split(/\s+/).length + ' words';
-
   renderPassageHighlight(0);
+  showActionsState('Reading');
+  await _initRecognizer();
+}
 
-  // Get mic stream for visualizer
+async function resumeReading() {
+  if (readingPhase !== 'paused') return;
+  readingPhase = 'reading';
+  isReading = true;
+  showActionsState('Reading');
+  // Don't reset accumulators — Azure picks up from where the kid is.
+  await _initRecognizer();
+}
+
+function pauseReading() {
+  if (readingPhase !== 'reading') return;
+  readingPhase = 'paused';
+  isReading = false;
+  stopVisualizer();
+  if (recognizer) {
+    const r = recognizer;
+    recognizer = null;
+    try {
+      r.stopContinuousRecognitionAsync(
+        () => { try { r.close(); } catch (e) {} releaseStream(); },
+        () => { try { r.close(); } catch (e) {} releaseStream(); }
+      );
+    } catch (e) { releaseStream(); }
+  } else {
+    releaseStream();
+  }
+  showActionsState('Paused');
+}
+
+function endReading() {
+  // Wrap up the whole session and go to results.
+  readingPhase = 'idle';
+  isReading = false;
+  if (recognizer) {
+    const r = recognizer;
+    recognizer = null;
+    r.stopContinuousRecognitionAsync(
+      () => { try { r.close(); } catch (e) {} releaseStream(); showResults(); },
+      () => { try { r.close(); } catch (e) {} releaseStream(); showResults(); }
+    );
+  } else {
+    releaseStream();
+    showResults();
+  }
+}
+
+async function _initRecognizer() {
+  // Mic stream for visualizer (Azure also opens its own internal mic).
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
   });
   window._stream = stream;
 
-  // Azure SDK manages its own mic — use fromDefaultMicrophoneInput for reliable recognition
   const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
   speechConfig.speechRecognitionLanguage = 'en-US';
   speechConfig.setProperty(SpeechSDK.PropertyId.Speech_SegmentationSilenceTimeoutMs, "2000");
@@ -1810,11 +1908,9 @@ async function startReading() {
   recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
   pronConfig.applyTo(recognizer);
 
-  // Start visualizer AFTER Azure is set up
   initLiveVisualizer('voiceVisualizer', 'voiceHint');
 
   const sentenceWordCounts = sentences.map(s => s.split(/\s+/).length);
-
   function updateWordProgress(text) {
     const totalHeard = text.split(/\s+/).filter(Boolean).length;
     const totalWords = currentText.split(/\s+/).length;
@@ -1828,15 +1924,12 @@ async function startReading() {
     document.getElementById('wordCounter').textContent = totalHeard + ' / ' + totalWords + ' words';
   }
 
-  // Real-time interim results — updates word counter and highlights as you speak
   recognizer.recognizing = function (s, e) {
     if (e.result.text) {
       const interimFull = allRecognizedText + (allRecognizedText ? ' ' : '') + e.result.text;
       updateWordProgress(interimFull);
     }
   };
-
-  // Final results — accumulates scores and confirmed text
   recognizer.recognized = function (s, e) {
     if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
       allRecognizedText += (allRecognizedText ? ' ' : '') + e.result.text;
@@ -1857,19 +1950,27 @@ async function startReading() {
           pronScoreWeights += w;
         }
       } catch (err) { console.error('Parse error:', err); }
-
       updateWordProgress(allRecognizedText);
     }
   };
-
   recognizer.canceled = function (s, e) {
     console.error('Speech canceled:', e.reason, e.errorDetails);
   };
-
   recognizer.startContinuousRecognitionAsync(
-    () => { console.log('Recognition started'); },
+    () => {},
     (err) => { console.error('Recognition start error:', err); }
   );
+}
+
+// Current sentence index based on words recognized so far.
+function currentSentenceIdx() {
+  const totalHeard = (allRecognizedText.match(/\S+/g) || []).length;
+  let acc = 0;
+  for (let i = 0; i < sentences.length; i++) {
+    acc += (sentences[i].match(/\S+/g) || []).length;
+    if (totalHeard < acc) return i;
+  }
+  return sentences.length - 1;
 }
 
 function renderPassageHighlight(activeSentenceIdx) {
@@ -1885,16 +1986,6 @@ function renderPassageHighlight(activeSentenceIdx) {
     }
     return '<span style="color:var(--slate-400);">' + s + '</span>';
   }).join(' ');
-}
-
-function finishReading() {
-  isReading = false;
-  if (recognizer) {
-    recognizer.stopContinuousRecognitionAsync(
-      function () { recognizer.close(); recognizer = null; releaseStream(); showResults(); },
-      function () { recognizer.close(); recognizer = null; releaseStream(); showResults(); }
-    );
-  }
 }
 
 function stopRecording() {
