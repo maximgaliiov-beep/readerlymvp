@@ -1329,14 +1329,15 @@ function showScreen(id) {
   document.getElementById(id).scrollTop = 0;
 }
 
+// Back arrow always routes to Settings — the arrow is labeled "Settings",
+// so per-step screen history breadcrumbs were confusing. From here the kid
+// can change grade/role/voice and start a new story.
 function goBack() {
+  if (recognizer) stopRecording();
   if (typeof stopNarration === 'function') stopNarration();
   if (typeof stopPreview === 'function') stopPreview();
-  if (screenHistory.length > 0) {
-    const prev = screenHistory.pop();
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(prev).classList.add('active');
-  }
+  screenHistory = [];
+  goToSettings();
 }
 
 function closeApp() {
