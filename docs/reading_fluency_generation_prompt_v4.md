@@ -11,13 +11,21 @@ Target the passage to the Lexile band for the grade. Word count and sentence-len
 - **K–2**: BR (Beginning Reader) to 530L
 - **3–5**: 530L to 910L
 - **6–8**: 860L to 1080L
-- **9–12**: 1030L to 1305L
 
 ## Vocabulary tier tags (mechanical metadata, not commentary)
 
-Flag every Tier 2 word inline as `[T2: word]` and every Tier 3 word as `[T3: word]`. These tags are stripped before display; they feed the vocabulary support system and are not commentary on the passage. Emit them inline with no surrounding explanation. Tier 1 words are common everyday words the child already knows. Tier 2 words are cross-curricular academic words. Tier 3 words are domain-specific technical terms.
+When a word in your passage is a Tier 2 word, write it as `[T2: word]` IN PLACE OF the word — the bracketed tag REPLACES the word in the sentence. Do NOT also include the bare word before or after the tag, and do NOT wrap the tag in any markdown (no `**bold**`, no `*italic*`, no backticks).
 
-For any proper noun a child at this grade is unlikely to pronounce correctly on first encounter, add a phonetic guide immediately after: `Geneva [jeh-NEE-vah]`. Phonetic guides are also mechanical metadata — render them inline without comment.
+CORRECT: "The dog was [T2: vigilant]."
+WRONG:   "The dog was [T2: vigilant] vigilant."
+WRONG:   "The dog was **vigilant** vigilant."
+WRONG:   "The dog was `[T2: vigilant]`."
+
+The same rule applies to Tier 3: `[T3: word]` replaces the word. Tier 1 words are common everyday words and need no tag.
+
+These tags are stripped before display — they exist for the vocabulary support system, not as commentary. Emit them inline with no surrounding explanation. Tier 2 words are cross-curricular academic words; Tier 3 words are domain-specific technical terms.
+
+For any proper noun a child at this grade is unlikely to pronounce correctly on first encounter, add a phonetic guide immediately after: `Geneva [jeh-NEE-vah]`. Phonetic guides are also mechanical metadata — render them inline without comment, without markdown.
 
 ---
 
@@ -53,16 +61,6 @@ Use 5–8 Tier 2 and Tier 3 words. Phonetic guides for non-English proper nouns.
 
 ---
 
-### 9–12
-
-Write a passage of 180–250 words of literary fiction in third person, built around the child's chosen situation. All sentence structures available — periodic sentences, fragments, parallel constructions — when they serve the prose. Average sentence length 18–25 words with strong rhetorical variation. Target 9–12 Lexile band.
-
-The prose style may be the point. Interiority, subtext, and rhythm matter as much as event. An unreliable narrator is permitted. Write from inside the character's experience, not above it. Every sentence must do work — cut anything that exists only to inform rather than to mean. Embed emotion entirely in specificity. The ending must be earned.
-
-Tier 3 vocabulary used when it is the right word, not to signal sophistication. No phonetic guides unless the text requires them.
-
----
-
 ## Host a podcast
 
 ### K–2
@@ -92,16 +90,6 @@ Write a passage of 120–180 words of conversational nonfiction in first person,
 Open with a counter-intuitive claim, a paradox, or a question without an obvious answer. The speaker holds a genuine position and defends it — this is not a neutral overview. Address the listener directly at least twice. Include one analogy a middle schooler would find resonant. Acknowledge one complicating fact before returning to the main argument. Close with a sentence that feels like the real point of the episode — not what it was about, but what it means.
 
 Use 5–8 Tier 2 and Tier 3 words. The speaker's register is warm and intelligent, never academic. Phonetic guides for non-English proper nouns.
-
----
-
-### 9–12
-
-Write a passage of 180–250 words of conversational nonfiction in first person, as if the child is recording a podcast for an intellectually curious audience about the chosen situation. All sentence structures, 18–25 words on average with strong variation. Target 9–12 Lexile band.
-
-The speaker does not simplify. Open with a hook that genuinely reframes how the listener thinks about a familiar subject. The speaker holds a position earned through the passage, not merely asserted. Include one analogy that illuminates rather than decorates. Acknowledge real complexity and genuine counterarguments without strawmanning them. The speaker's voice is distinctive — it should sound like a specific person, not a generic host. Close without a summary. The final sentence is the point.
-
-Tier 3 vocabulary expected and used precisely. No phonetic guides unless the text requires them.
 
 ---
 
@@ -137,16 +125,6 @@ Use 5–8 Tier 2 and Tier 3 words. No passive voice in the core argument sentenc
 
 ---
 
-### 9–12
-
-Write a passage of 180–250 words as a substantive talk a high schooler would deliver to an informed audience about the chosen situation. All sentence structures, 18–25 words on average with strong rhetorical variation. Target 9–12 Lexile band.
-
-Open with a claim that genuinely reframes how the audience thinks about something — counter-intuitive or uncomfortable. Build the argument with at least one piece of concrete evidence and one acknowledgment of real complexity that is not resolved cheaply. The speaker's voice is distinctive and confident without being arrogant. The argument must be one a thoughtful person could disagree with — avoid consensus positions dressed up as argument. Close with the thing the whole talk has been moving toward — not a summary, not a vague call to action, but the real point.
-
-Tier 3 vocabulary expected and used precisely. One rhetorical device, used once, with intention.
-
----
-
 ## Teach a lesson
 
 ### K–2
@@ -176,16 +154,6 @@ Write a passage of 120–180 words as a substantive explanation of the chosen si
 Define the concept within the first two sentences. Explain its mechanism. Include one analogy that illuminates the mechanism — not just its existence. Give one real-world application. Include at least one sentence of epistemic framing used accurately: "Scientists have established…" versus "Current research suggests…" mean different things and are not interchangeable. Close with an implication — what does understanding this concept change about how you see something?
 
 Use 5–8 Tier 2 and Tier 3 words. The teacher's tone is collegial, not condescending. Phonetic guides for non-English proper nouns.
-
----
-
-### 9–12
-
-Write a passage of 180–250 words as a rigorous explanation of the chosen situation, written as if an expert is speaking to students ready for genuine intellectual challenge. All sentence structures, 18–25 words on average with strong variation. Target 9–12 Lexile band.
-
-Define the concept precisely in the first two sentences — not approximately. Explain the mechanism at the level of detail a student needs to actually understand it, not just recognize it. Use one analogy that genuinely illuminates the underlying logic. Include real-world application or implication. Use hedging language accurately and purposefully — "evidence suggests" signals ongoing investigation; "it is established that" signals consensus. Close with the deepest implication of the concept: the thing that changes once you understand it.
-
-Tier 3 vocabulary expected. Define Tier 3 terms implicitly through context. No phonetic guides unless the text requires them.
 
 ---
 
@@ -219,12 +187,4 @@ The character has a specific situation, a specific voice, and a perspective that
 
 Use 4–6 Tier 2 words. Tier 3 only where the character's voice genuinely calls for it. Phonetic guides for non-English proper nouns.
 
----
 
-### 9–12
-
-Write a first-person piece of 180–250 words built around the child's chosen situation. A character speaks or tells from inside their own experience — monologue, story, or hybrid. The form is whatever serves the character's voice. Target 9–12 Lexile band.
-
-The character has a singular voice that could belong to no one else. The situation may be personal, philosophical, or quietly ordinary — what matters is that the character is genuinely inside it. Ambivalence, contradiction, and unresolved feeling are not problems to solve; they are the material. Include at least one moment of real self-interruption. The most important thing the character needs to say may never be said directly. End where the character ends — in resolution, rupture, or the particular stillness that follows something having shifted.
-
-Tier 3 vocabulary used only when it is the character's word, not the writer's. The voice must be singular. No two pieces at this level should sound like they came from the same person.

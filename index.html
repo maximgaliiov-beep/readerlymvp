@@ -916,7 +916,6 @@
           <div class="grade-card" data-level="K-2" onclick="selectGrade(this)">K - Grade 2</div>
           <div class="grade-card" data-level="3-5" onclick="selectGrade(this)">Grade 3-5</div>
           <div class="grade-card" data-level="6-8" onclick="selectGrade(this)">Grade 6-8</div>
-          <div class="grade-card" data-level="9-12" onclick="selectGrade(this)">Grade 9-12</div>
         </div>
       </div>
     </div>
@@ -1234,14 +1233,10 @@ const PASSAGES = {
   '6-8': [
     "The ancient castle stood on top of a rocky cliff overlooking the ocean. Waves crashed against the stones below, sending white spray into the salty air. A narrow path wound its way up the hillside to the castle gates.",
     "Scientists discovered a new species of frog living deep in the rainforest. The tiny creature was bright blue with golden spots on its back. It could fit on the tip of a human finger."
-  ],
-  '9-12': [
-    "Throughout history, civilizations have risen and fallen along the banks of great rivers. The Nile, the Tigris, and the Yangtze each nurtured communities that developed writing, agriculture, and complex systems of government. These waterways provided not only sustenance but also routes for trade and cultural exchange.",
-    "Renewable energy sources such as solar, wind, and hydroelectric power are becoming increasingly important as nations work to reduce their dependence on fossil fuels. Engineers and scientists continue to improve the efficiency of these technologies, making clean energy more accessible and affordable for communities around the globe."
   ]
 };
 
-const GRADE_LABELS = { 'K-2': 'K-Grade 2', '3-5': 'Grade 3-5', '6-8': 'Grade 6-8', '9-12': 'Grade 9-12' };
+const GRADE_LABELS = { 'K-2': 'K-Grade 2', '3-5': 'Grade 3-5', '6-8': 'Grade 6-8' };
 
 const SITUATION_SUGGESTIONS = {
   'Narrate an audiobook': [
@@ -1454,12 +1449,11 @@ async function goToGenerate() {
 }
 
 // Pick an illustration style that fits the grade band — childish K-2
-// illustrations aren't appropriate for 9-12.
+// illustrations aren't appropriate for 6-8.
 const IMAGE_STYLE_BY_GRADE = {
-  'K-2':  "Cute, simple picture-book illustration with friendly cartoon characters, soft rounded shapes, warm cheerful colors, like an early-reader storybook.",
-  '3-5':  "Vibrant middle-grade book illustration. More detailed than a picture book but still warm and approachable. Like a Roald Dahl or Magic Tree House cover.",
-  '6-8':  "Contemporary young-adult novel cover illustration. Stylized but grounded, atmospheric lighting, no cartoony or childish elements. Like a Rick Riordan or Wings of Fire cover.",
-  '9-12': "Sophisticated editorial illustration, like a New York Times Magazine cover. Mature artistic style, strong composition, evocative mood. Suitable for a high-school reader."
+  'K-2': "Cute, simple picture-book illustration with friendly cartoon characters, soft rounded shapes, warm cheerful colors, like an early-reader storybook.",
+  '3-5': "Vibrant middle-grade book illustration. More detailed than a picture book but still warm and approachable. Like a Roald Dahl or Magic Tree House cover.",
+  '6-8': "Contemporary young-adult novel cover illustration. Stylized but grounded, atmospheric lighting, no cartoony or childish elements. Like a Rick Riordan or Wings of Fire cover."
 };
 
 // Generate an illustration that matches the passage's situation, sized for the
