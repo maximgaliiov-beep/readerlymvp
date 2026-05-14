@@ -527,11 +527,27 @@
   }
   .mic-btn-green { background: var(--emerald-500); color: white; }
   .mic-btn-green:hover { background: var(--emerald-600); transform: scale(1.05); }
+  .mic-btn-listen { background: var(--brighty-yellow); color: var(--slate-900); }
+  .mic-btn-listen:hover:not(:disabled) { background: #f5c020; transform: scale(1.05); }
+  .mic-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+  .mic-btn-listen.is-playing { animation: mic-pulse-yellow 1.5s ease-in-out infinite; }
+  @keyframes mic-pulse-yellow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,210,48,0.5); }
+    50% { box-shadow: 0 0 0 16px rgba(255,210,48,0); }
+  }
   .action-label {
     margin-top: 8px; font-size: 14px; font-weight: 500; color: var(--indigo-500);
   }
   .action-label-red { color: var(--red-500); }
   .action-label-green { color: var(--emerald-500); }
+  .action-label-yellow { color: var(--amber-500); }
+  .dual-actions {
+    display: flex; gap: 36px; align-items: flex-end; justify-content: center;
+  }
+  .action-pair {
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .action-pair.hidden { display: none; }
 
   /* ===== WAVE ANIMATION (SVG sine waves) ===== */
   .wave-container {
@@ -956,7 +972,7 @@
       </div>
     </div>
     <div class="screen-bottom">
-      <button class="btn btn-primary" onclick="goToListen()">Start listening &#8594;</button>
+      <button class="btn btn-primary" onclick="goToColdRead()">Let's read &#8594;</button>
     </div>
   </div>
 
@@ -988,34 +1004,6 @@
   </div>
 
   <!-- ===== SCREEN: Listen ===== -->
-  <div class="screen" id="screenListen">
-    <div class="banner banner-indigo">
-      <h2 id="listenTitle">Listen first &#128064;</h2>
-      <p id="listenSubtitle"><span id="listenStatus">Getting your story ready...</span></p>
-    </div>
-    <div class="screen-content">
-      <div class="listen-brighty">
-        <div class="brighty brighty--lg" id="listenBrighty">&#128048;</div>
-      </div>
-      <div class="passage-card">
-        <div class="passage-label">&#128266; Listening...</div>
-        <div class="passage-text" id="listenPassageText"></div>
-      </div>
-      <div class="listen-controls">
-        <button class="listen-control-btn" id="btnPauseNarration" onclick="togglePause()" disabled>
-          <span class="listen-control-icon" id="pauseIcon">&#9208;</span>
-          <span class="listen-control-label" id="pauseLabel">Pause</span>
-        </button>
-      </div>
-      <button class="btn-link" id="listenSkip" onclick="skipListen()">Skip listening &#8594;</button>
-    </div>
-    <div class="action-area hidden" id="listenAction">
-      <button class="mic-btn mic-btn-green" onclick="goToReadAloud()">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 12h14M12 5l7 7-7 7" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <div class="action-label action-label-green">Now you try!</div>
-    </div>
-  </div>
 
   <!-- ===== SCREEN 2: Reading ===== -->
   <div class="screen" id="screenReading">
@@ -1035,10 +1023,20 @@
       <div class="word-counter hidden" id="wordCounter"></div>
     </div>
     <div class="action-area" id="readingAction">
-      <button class="mic-btn mic-btn-record" id="btnMic" onclick="startReading()">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-      </button>
-      <div class="action-label" id="micLabel">Tap to speak</div>
+      <div class="dual-actions">
+        <div class="action-pair" id="listenPair">
+          <button class="mic-btn mic-btn-listen" id="btnListenFirst" onclick="listenFirst()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+          </button>
+          <div class="action-label action-label-yellow" id="listenLabel">Listen first</div>
+        </div>
+        <div class="action-pair">
+          <button class="mic-btn mic-btn-record" id="btnMic" onclick="startReading()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+          </button>
+          <div class="action-label" id="micLabel">Read it</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1437,24 +1435,11 @@ function goToVoicePick() {
   showScreen('screenVoicePick');
 }
 
-function goToListen() {
-  stopPreview(); // any in-flight voice sample
-  document.getElementById('listenAction').classList.add('hidden');
-  document.getElementById('listenSkip').classList.remove('hidden');
-  document.getElementById('listenStatus').textContent = 'Getting your story ready...';
-  setPauseButtonState('loading');
-  renderListenPassage();
-  showScreen('screenListen');
-  startNarration();
-}
-
-function renderListenPassage() {
-  // Wrap each word in a span so we can highlight as the AI reads.
-  const el = document.getElementById('listenPassageText');
-  const words = currentText.split(/(\s+)/); // keep whitespace as separators
-  el.innerHTML = words.map((w, i) =>
-    /\S/.test(w) ? '<span class="listen-word" data-i="' + i + '">' + w + '</span>' : w
-  ).join('');
+function goToColdRead() {
+  stopPreview();
+  stopNarration();
+  showScreen('screenReading');
+  resetReadingUI();
 }
 
 // ===== TTS NARRATION (Listen step, Azure Neural TTS) =====
@@ -1616,77 +1601,73 @@ function previewVoice(voiceId) {
 // <audio> element we own. This gives us real pause/resume/stop, and ensures
 // "Skip listening" actually silences audio (Azure's auto-play buffers chunks
 // that the synthesizer's close() doesn't always interrupt).
-function startNarration() {
-  stopNarration();
-
-  if (!window.SpeechSDK) {
-    document.getElementById('listenAction').classList.remove('hidden');
+// "Listen first" — AI reads only sentence 1 + "Now you read it.", then
+// auto-activates the microphone so the student picks up where Brighty left off.
+function listenFirst() {
+  if (!sentences.length || !window.SpeechSDK) {
+    startReading();
     return;
   }
+  stopNarration();
+  stopPreview();
+
+  const btnListen = document.getElementById('btnListenFirst');
+  const btnMic = document.getElementById('btnMic');
+  btnListen.disabled = true;
+  btnMic.disabled = true;
+  btnListen.classList.add('is-playing');
+  document.getElementById('listenLabel').textContent = "Brighty's reading...";
 
   narrationState.runId++;
   const myRun = narrationState.runId;
   narrationState.active = true;
-  narrationState.wordEvents = [];
-  document.getElementById('listenAction').classList.add('hidden');
-  document.getElementById('listenStatus').textContent = 'Getting your story ready...';
-  setPauseButtonState('loading');
 
   const voice = getVoice(currentVoiceId);
   const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
   speechConfig.speechSynthesisVoiceName = voice.id;
-  // RIFF/PCM (WAV) instead of MP3. MP3 has ~70ms encoder priming silence at the
-  // start that audio.currentTime counts but Azure's audioOffset doesn't, which
-  // was pushing the word highlight ~1 word ahead of the speech. PCM has zero
-  // encoder delay → frame-accurate sync. File is bigger but our passages are
-  // short (≤15s) so it's still small.
   speechConfig.speechSynthesisOutputFormat =
     SpeechSDK.SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
 
-  // CRITICAL: never let Azure play to the default speaker. With no audioConfig
-  // (or null), the SDK auto-plays through an internal speaker buffer that
-  // survives synthesizer.close(). That caused echo (Azure + our <audio>) and
-  // made pause useless. Route to a sink stream we never read.
+  // Sink output stream — never play to default speaker. We render through our
+  // own <audio> element so stop/skip actually cuts audio.
   const sinkStream = SpeechSDK.PullAudioOutputStream.create();
   const audioConfig = SpeechSDK.AudioConfig.fromStreamOutput(sinkStream);
   const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
   narrationState.synthesizer = synthesizer;
 
-  // wordBoundary fires during synthesis. textOffset is into the SSML string.
-  const ssmlPrefixLen = buildSsml('', voice).indexOf('</prosody>');
-  synthesizer.wordBoundary = (s, e) => {
-    if (myRun !== narrationState.runId) return;
-    let offset = e.textOffset - ssmlPrefixLen;
-    // Defensive: some SDK paths give offsets relative to text; fall back to raw offset.
-    if (offset < 0 || offset > currentText.length) offset = e.textOffset;
-    const safe = Math.max(0, Math.min(offset, currentText.length));
-    const wordIdx = (currentText.slice(0, safe).match(/\S+/g) || []).length;
-    const audioMs = e.audioOffset / 10000; // ticks (100ns) → ms
-    narrationState.wordEvents.push({ wordIdx, audioMs });
-  };
+  const rate = speedToSsmlRate(currentSpeed);
+  const styleOpen  = voice.style ? `<mstts:express-as style="${voice.style}">` : '';
+  const styleClose = voice.style ? `</mstts:express-as>` : '';
+  const sentenceSafe = escapeForSsml(sentences[0]);
+  const ssml = [
+    '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis"',
+    ' xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="en-US">',
+    `<voice name="${voice.id}">`, styleOpen,
+      `<prosody rate="${rate}">${sentenceSafe}<break time="600ms"/>Now you read it.</prosody>`,
+    styleClose, '</voice></speak>'
+  ].join('');
 
-  const ssml = buildSsml(currentText, voice);
   synthesizer.speakSsmlAsync(
     ssml,
     (result) => {
       try { synthesizer.close(); } catch (_) {}
       if (myRun !== narrationState.runId) return;
       if (result.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
-        playSynthBuffer(result.audioData, myRun);
+        playListenFirstBuffer(result.audioData, myRun);
       } else {
-        console.error('Synthesis failed:', result.errorDetails || result.reason);
-        finishNarration();
+        console.error('Listen-first synthesis failed:', result.errorDetails || result.reason);
+        restoreListenButtons();
       }
     },
     (err) => {
       try { synthesizer.close(); } catch (_) {}
-      console.error('Azure TTS error:', err);
-      if (myRun === narrationState.runId) finishNarration();
+      console.error('Listen-first error:', err);
+      if (myRun === narrationState.runId) restoreListenButtons();
     }
   );
 }
 
-function playSynthBuffer(audioData, myRun) {
+function playListenFirstBuffer(audioData, myRun) {
   if (myRun !== narrationState.runId) return;
   const blob = new Blob([audioData], { type: 'audio/wav' });
   const url = URL.createObjectURL(blob);
@@ -1694,145 +1675,30 @@ function playSynthBuffer(audioData, myRun) {
   narrationState.audio = audio;
   narrationState.audioUrl = url;
 
-  const events = narrationState.wordEvents;
-  let lastHighlightIdx = -1;
-  let lastEventCursor = 0; // monotonic — events are time-ordered, so we don't rescan from 0
-
-  // rAF gives 60Hz tracking, much smoother than the 4-12Hz `timeupdate` event
-  // (especially in Safari). We also skip the DOM write when the word index hasn't
-  // moved, which kills the layout/scroll thrash that was making the UI jump.
-  function tickHighlight() {
-    if (myRun !== narrationState.runId) return;
-    if (audio.paused || audio.ended) return;
-    const currentMs = audio.currentTime * 1000;
-    while (
-      lastEventCursor + 1 < events.length &&
-      events[lastEventCursor + 1].audioMs <= currentMs
-    ) {
-      lastEventCursor++;
-    }
-    const wordIdx = events.length ? events[lastEventCursor].wordIdx : 0;
-    if (wordIdx !== lastHighlightIdx) {
-      paintHighlight(wordIdx, lastHighlightIdx);
-      lastHighlightIdx = wordIdx;
-    }
-    requestAnimationFrame(tickHighlight);
-  }
-
-  audio.onplay = () => {
-    document.getElementById('listenBrighty')?.classList.add('brighty--talk');
-    requestAnimationFrame(tickHighlight);
-  };
-  audio.onpause = () => {
-    document.getElementById('listenBrighty')?.classList.remove('brighty--talk');
-  };
   audio.onended = () => {
-    if (myRun === narrationState.runId) finishNarration();
+    if (myRun !== narrationState.runId) return;
+    narrationState.active = false;
+    restoreListenButtons();
+    startReading(); // auto-hand-off to the student's read
   };
   audio.onerror = (e) => {
-    console.error('Audio playback error:', e);
-    if (myRun === narrationState.runId) finishNarration();
+    console.error('Listen-first audio error:', e);
+    if (myRun === narrationState.runId) restoreListenButtons();
   };
-
-  document.getElementById('listenStatus').textContent = "I'm reading to you. Follow along.";
-  setPauseButtonState('playing');
   audio.play().catch(err => {
-    console.error('Play failed:', err);
-    if (myRun === narrationState.runId) finishNarration();
+    console.error('Listen-first play failed:', err);
+    restoreListenButtons();
   });
 }
 
-// Differential DOM update: only touch spans whose state actually changes
-// between the previous active word and the new one. Avoids redrawing every
-// span on every tick.
-function paintHighlight(newIdx, prevIdx) {
-  const spans = document.querySelectorAll('#listenPassageText .listen-word');
-  if (!spans.length) return;
-  if (prevIdx >= 0 && spans[prevIdx]) {
-    spans[prevIdx].classList.remove('word-now-speaking');
-    spans[prevIdx].classList.add('word-spoken');
-  }
-  // Catch up any spans we may have skipped (e.g., rAF dropped frames)
-  for (let i = Math.max(0, prevIdx + 1); i < newIdx; i++) {
-    if (spans[i]) spans[i].classList.add('word-spoken');
-  }
-  const current = spans[newIdx];
-  if (current) {
-    current.classList.add('word-now-speaking');
-    current.classList.remove('word-spoken');
-    // Only scroll forward when the word is below the visible window. We never
-    // scroll up, which is what was causing the back-and-forth bouncing.
-    const rect = current.getBoundingClientRect();
-    if (rect.bottom > window.innerHeight - 120) {
-      current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }
-}
-
-function togglePause() {
-  const audio = narrationState.audio;
-  if (!audio) return;
-  if (audio.paused) {
-    audio.play();
-    setPauseButtonState('playing');
-  } else {
-    audio.pause();
-    setPauseButtonState('paused');
-  }
-}
-
-function setPauseButtonState(state) {
-  const btn = document.getElementById('btnPauseNarration');
-  const icon = document.getElementById('pauseIcon');
-  const label = document.getElementById('pauseLabel');
-  if (!btn) return;
-  if (state === 'loading') {
-    btn.disabled = true;
-    icon.innerHTML = '&#8987;';
-    label.textContent = 'Loading';
-  } else if (state === 'paused') {
-    btn.disabled = false;
-    icon.innerHTML = '&#9654;';
-    label.textContent = 'Resume';
-  } else {
-    btn.disabled = false;
-    icon.innerHTML = '&#9208;';
-    label.textContent = 'Pause';
-  }
-}
-
-function highlightWord(absoluteIdx) {
-  const spans = document.querySelectorAll('#listenPassageText .listen-word');
-  spans.forEach((s, i) => {
-    s.classList.remove('word-now-speaking');
-    if (i < absoluteIdx) s.classList.add('word-spoken');
-    else s.classList.remove('word-spoken');
-  });
-  const current = spans[absoluteIdx];
-  if (current) {
-    current.classList.add('word-now-speaking');
-    current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-}
-
-function highlightUpTo(n) {
-  const spans = document.querySelectorAll('#listenPassageText .listen-word');
-  spans.forEach((s, i) => {
-    s.classList.remove('word-now-speaking');
-    s.classList.toggle('word-spoken', i < n);
-  });
-}
-
-function finishNarration() {
-  narrationState.active = false;
-  document.getElementById('listenBrighty')?.classList.remove('brighty--talk');
-  highlightUpTo((currentText.match(/\S+/g) || []).length);
-  document.getElementById('listenAction').classList.remove('hidden');
-}
-
-function skipListen() {
-  stopNarration();
-  goToReadAloud();
+function restoreListenButtons() {
+  const btnListen = document.getElementById('btnListenFirst');
+  const btnMic = document.getElementById('btnMic');
+  if (!btnListen) return;
+  btnListen.disabled = false;
+  btnMic.disabled = false;
+  btnListen.classList.remove('is-playing');
+  document.getElementById('listenLabel').textContent = 'Listen first';
 }
 
 function stopNarration() {
@@ -1856,12 +1722,6 @@ function stopNarration() {
   }
 }
 
-function goToReadAloud() {
-  stopNarration();
-  showScreen('screenReading');
-  resetReadingUI();
-}
-
 // Static fallback — used by tryNewText if Gemini isn't reachable.
 function pickPassage() {
   const passages = PASSAGES[currentLevel] || PASSAGES['3-5'];
@@ -1871,12 +1731,20 @@ function pickPassage() {
 
 function resetReadingUI() {
   document.getElementById('readingTitle').innerHTML =
-    "Time to shine! &#127775;<br>Read it out loud.";
-  document.getElementById('passageText').innerHTML = currentText;
+    "Cold reading &#128214;<br>Listen first, or read it yourself.";
+  // Render with sentence 0 active and the rest dim — user hasn't started reading yet.
+  renderPassageHighlight(0);
+  // Restore the dual action buttons (Listen + Mic).
+  document.getElementById('listenPair').classList.remove('hidden');
+  const btnListen = document.getElementById('btnListenFirst');
+  btnListen.classList.remove('is-playing');
+  btnListen.disabled = false;
+  document.getElementById('listenLabel').textContent = 'Listen first';
   document.getElementById('btnMic').className = 'mic-btn mic-btn-record';
   document.getElementById('btnMic').innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
   document.getElementById('btnMic').onclick = startReading;
-  document.getElementById('micLabel').textContent = 'Tap to speak';
+  document.getElementById('btnMic').disabled = false;
+  document.getElementById('micLabel').textContent = 'Read it';
   document.getElementById('micLabel').className = 'action-label';
   document.getElementById('wordCounter').classList.add('hidden');
   document.getElementById('voiceHint').textContent = '';
@@ -1904,7 +1772,8 @@ async function startReading() {
   pronScoreWeights = 0;
   isReading = true;
 
-  // Switch to recording UI
+  // Switch to recording UI — hide Listen, transform Mic into Stop.
+  document.getElementById('listenPair').classList.add('hidden');
   document.getElementById('btnMic').className = 'mic-btn mic-btn-stop';
   document.getElementById('btnMic').innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 6L6 18M6 6l12 12" stroke="white" stroke-width="3" stroke-linecap="round" fill="none"/></svg>';
   document.getElementById('btnMic').onclick = finishReading;
@@ -2215,10 +2084,10 @@ function spawnConfetti() {
   setTimeout(() => layer.remove(), 3000);
 }
 
-// "Read it again" — replay the AI narration, then re-read the same passage.
+// "Read it again" — return to the cold-read screen with a fresh attempt.
 function readAgain() {
   previousScores = null;
-  goToListen();
+  goToColdRead();
 }
 
 // ===== WORD PRACTICE =====
