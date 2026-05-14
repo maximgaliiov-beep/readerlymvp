@@ -1808,7 +1808,9 @@ function previewVoice(voiceId) {
   const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
   previewState.synthesizer = synthesizer;
 
-  const rate = speedToSsmlRate(currentSpeed);
+  // Preview always plays at full natural rate — the slow reading rate is for
+  // practice-time clarity, but a sluggish "Hi! I'm Aria." makes the picker
+  // feel broken. Kid should hear the voice's natural energy when sampling.
   const sample = `Hi! I'm ${voice.name}.`;
   const styleOpen  = voice.style ? `<mstts:express-as style="${voice.style}">` : '';
   const styleClose = voice.style ? `</mstts:express-as>` : '';
@@ -1816,7 +1818,7 @@ function previewVoice(voiceId) {
     '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis"',
     ' xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="en-US">',
     `<voice name="${voice.id}">`, styleOpen,
-      `<prosody rate="${rate}">${sample}</prosody>`,
+      `<prosody rate="+0%">${sample}</prosody>`,
     styleClose, '</voice></speak>'
   ].join('');
 
