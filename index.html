@@ -284,15 +284,16 @@
     color: var(--slate-900); margin-bottom: 24px;
   }
   .grade-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 12px; width: 100%; max-width: 340px;
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px; width: 100%; max-width: 460px; margin: 0 auto;
   }
   .grade-card {
     background: var(--white); border: 2px solid var(--slate-200);
-    border-radius: 12px; padding: 24px 12px;
-    text-align: center; font-size: 15px; font-weight: 500;
+    border-radius: 12px; padding: 18px 8px;
+    text-align: center; font-size: 14px; font-weight: 500;
     color: var(--slate-700); cursor: pointer;
     transition: all 0.2s;
+    line-height: 1.25;
   }
   .grade-card:hover { border-color: var(--indigo-400); background: var(--indigo-50); }
   .grade-card.selected {
@@ -854,8 +855,8 @@
     .passage-card { max-width: 700px; margin: 0 auto; }
     .passage-text { font-size: 20px; }
 
-    .grade-grid { max-width: 500px; gap: 16px; }
-    .grade-card { padding: 28px 20px; font-size: 16px; }
+    .grade-grid { max-width: 560px; gap: 14px; }
+    .grade-card { padding: 22px 12px; font-size: 16px; }
 
     .onboard-center { padding: 40px; }
     .onboard-title { font-size: 30px; }
