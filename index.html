@@ -885,7 +885,63 @@
   }
 
   @media (min-width: 1024px) {
-    .app { max-width: 1040px; }
+    .app { max-width: 1200px; }
+
+    /* Roomier padding for the desktop content area */
+    .screen-content { padding: 40px 56px; }
+    .banner { padding: 28px 56px 36px; }
+    .screen-bottom { padding: 20px 56px 36px; }
+
+    /* Cold Reading: image left, passage + controls right.
+       Sticky image so it stays visible if the passage scrolls. */
+    #screenReading .screen-content {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.4fr);
+      gap: 40px;
+      align-items: start;
+    }
+    #screenReading .story-image {
+      max-width: 100%; aspect-ratio: 4 / 5;
+      position: sticky; top: 24px;
+      grid-row: 1 / span 5;
+    }
+    #screenReading .passage-card,
+    #screenReading .paused-hint,
+    #screenReading .voice-visualizer,
+    #screenReading .voice-hint,
+    #screenReading .word-counter {
+      grid-column: 2;
+      max-width: none;
+    }
+    #screenReading .passage-text { font-size: 22px; line-height: 1.65; }
+
+    /* Settings: wider inner grids so cards line up across the page.
+       Roles in two columns, voices in four. Grade row already 3-col. */
+    .role-grid { grid-template-columns: 1fr 1fr; max-width: 720px; gap: 14px; }
+    .voice-grid { grid-template-columns: repeat(4, 1fr); max-width: 720px; gap: 14px; }
+    .grade-grid { max-width: 600px; }
+    .setting-sub, .settings-section .speed-row { max-width: 720px; margin-left: auto; margin-right: auto; }
+
+    /* Bigger Brighty in the banner when there's room */
+    .banner-with-brighty .brighty--md { width: 56px; height: 56px; font-size: 32px; }
+
+    /* Results passage + scores side by side */
+    #screenResults .screen-content {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.9fr);
+      gap: 40px;
+      align-items: start;
+    }
+    #screenResults .passage-card { grid-column: 1; max-width: none; }
+    #screenResults .scores-row,
+    #screenResults .section-label,
+    #screenResults .practice-chips { grid-column: 2; max-width: none; margin: 0; }
+    #screenResults .scores-row { grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  }
+
+  @media (min-width: 1440px) {
+    .app { max-width: 1320px; }
+    #screenReading .story-image { aspect-ratio: 3 / 4; }
   }
 </style>
 </head>
