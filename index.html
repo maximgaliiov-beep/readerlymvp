@@ -985,7 +985,7 @@
       </div>
     </div>
     <div class="screen-bottom">
-      <button class="btn btn-primary" onclick="goToVoicePick()">Start practicing &#8594;</button>
+      <button class="btn btn-primary" onclick="goToListen()">Start listening &#8594;</button>
     </div>
   </div>
 
@@ -1012,7 +1012,7 @@
       </div>
     </div>
     <div class="screen-bottom">
-      <button class="btn btn-primary" id="btnStartListen" onclick="goToListen()">Start listening &#8594;</button>
+      <button class="btn btn-primary" id="btnStartListen" onclick="showGetReady()">See my story &#8594;</button>
     </div>
   </div>
 
@@ -1395,7 +1395,7 @@ async function goToGenerate() {
     attemptCount = 0;
     previousScores = null;
     lastRead = null;
-    showGetReady();
+    goToVoicePick();
   } catch (err) {
     console.error('Gemini error:', err);
     const errEl = document.getElementById('generatingError');
@@ -1469,6 +1469,7 @@ function applyPassage(parsed) {
 }
 
 function showGetReady() {
+  if (typeof stopPreview === 'function') stopPreview();
   document.getElementById('getReadyPassageText').innerHTML = currentText;
   showScreen('screenGetReady');
 }
