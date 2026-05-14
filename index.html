@@ -913,36 +913,7 @@
       </div>
     </div>
     <div class="screen-bottom">
-      <button class="btn btn-primary" id="btnRoleContinue" onclick="goToSituation()" disabled>Continue &#8594;</button>
-    </div>
-  </div>
-
-  <!-- ===== SCREEN: Situation ===== -->
-  <div class="screen" id="screenSituation">
-    <div class="banner banner-indigo">
-      <div class="banner-with-brighty">
-        <div class="brighty brighty--md">&#128048;</div>
-        <div>
-          <h2>What is it about?</h2>
-          <p>Pick an idea, or tell me your own!</p>
-        </div>
-      </div>
-    </div>
-    <div class="screen-content">
-      <div class="situation-form">
-        <textarea
-          id="situationInput"
-          class="situation-input"
-          placeholder="A puppy who learns to swim..."
-          rows="3"
-          oninput="onSituationChange()"
-        ></textarea>
-        <div class="situation-label">Need an idea?</div>
-        <div class="situation-chips" id="situationChips"></div>
-      </div>
-    </div>
-    <div class="screen-bottom">
-      <button class="btn btn-primary" id="btnSituationContinue" onclick="goToGenerate()" disabled>Make my story &#8594;</button>
+      <button class="btn btn-primary" id="btnRoleContinue" onclick="pickRandomAndGenerate()" disabled>Make my story &#8594;</button>
     </div>
   </div>
 
@@ -961,8 +932,8 @@
     </div>
     <div class="screen-bottom hidden" id="generatingActions">
       <div class="btn-row">
-        <button class="btn btn-outline" onclick="goToSituation()">&#8592; Change story</button>
-        <button class="btn btn-primary" onclick="goToGenerate()">Try again</button>
+        <button class="btn btn-outline" onclick="goToRole()">&#8592; Pick again</button>
+        <button class="btn btn-primary" onclick="pickRandomAndGenerate()">Try again</button>
       </div>
     </div>
   </div>
@@ -1354,32 +1325,17 @@ function selectRole(el) {
   document.getElementById('btnRoleContinue').disabled = false;
 }
 
-function goToSituation() {
+// Pick a random situation from the curated list for the chosen role.
+function pickRandomSituation() {
+  const pool = SITUATION_SUGGESTIONS[currentRole] || [];
+  if (!pool.length) return 'A short adventure';
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function pickRandomAndGenerate() {
   if (!currentRole) return;
-  const chips = document.getElementById('situationChips');
-  chips.innerHTML = '';
-  (SITUATION_SUGGESTIONS[currentRole] || []).forEach(s => {
-    const chip = document.createElement('button');
-    chip.className = 'situation-chip';
-    chip.textContent = s;
-    chip.onclick = () => setSituation(s);
-    chips.appendChild(chip);
-  });
-  document.getElementById('situationInput').value = '';
-  currentSituation = '';
-  document.getElementById('btnSituationContinue').disabled = true;
-  showScreen('screenSituation');
-}
-
-function setSituation(text) {
-  document.getElementById('situationInput').value = text;
-  onSituationChange();
-}
-
-function onSituationChange() {
-  const v = document.getElementById('situationInput').value.trim();
-  currentSituation = v;
-  document.getElementById('btnSituationContinue').disabled = v.length < 3;
+  currentSituation = pickRandomSituation();
+  goToGenerate();
 }
 
 async function goToGenerate() {
@@ -2503,7 +2459,7 @@ function readSameText() {
 
 function tryNewText() {
   screenHistory = ['screenGrade'];
-  goToGenerate();
+  pickRandomAndGenerate();
 }
 
 function endPractice() {
