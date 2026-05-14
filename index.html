@@ -1383,13 +1383,20 @@ let sessionWordsPracticed = [];
 let sessionWordsWithErrors = [];
 
 // ===== SCREEN NAVIGATION =====
+// Screens where "Settings" doesn't make sense as a back destination — either
+// you're already on Settings or you haven't picked anything yet. Hide the
+// back button on those; show "← Settings" on every other screen.
+const SCREENS_WITHOUT_BACK = new Set(['screenOnboard', 'screenSettings']);
+
 function showScreen(id) {
   const current = document.querySelector('.screen.active');
   if (current && current.id !== id) screenHistory.push(current.id);
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  // Scroll to top
   document.getElementById(id).scrollTop = 0;
+  // Adjust the back button per-screen.
+  const backBtn = document.getElementById('btnBack');
+  if (backBtn) backBtn.style.visibility = SCREENS_WITHOUT_BACK.has(id) ? 'hidden' : 'visible';
 }
 
 // Back arrow always routes to Settings — the arrow is labeled "Settings",
