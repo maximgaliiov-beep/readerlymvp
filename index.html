@@ -157,7 +157,7 @@
   .banner-with-brighty h2 { margin: 0; }
   .banner-with-brighty p { margin-top: 2px; }
   .banner {
-    padding: 12px 16px 16px;
+    padding: 10px 16px 12px;
     color: white;
     flex-shrink: 0;
     border-bottom-left-radius: var(--hero-radius);
@@ -165,8 +165,10 @@
   }
   .banner-indigo { background: var(--indigo-500); }
   .banner-green { background: var(--emerald-500); }
-  .banner h2 { font-size: 18px; font-weight: 700; line-height: 1.25; }
-  .banner p { font-size: 13px; font-weight: 400; opacity: 0.95; margin-top: 2px; }
+  .banner h2 { font-size: 16px; font-weight: 700; line-height: 1.25; }
+  .banner p { font-size: 12px; font-weight: 400; opacity: 0.95; margin-top: 2px; }
+  /* Compact mascot inside the banner across all screens */
+  .banner-with-brighty .brighty--md { width: 36px; height: 36px; font-size: 20px; }
   .banner-row { display: flex; justify-content: space-between; align-items: center; }
   .banner-counter {
     font-size: 14px; font-weight: 500;
@@ -300,11 +302,6 @@
     border-color: var(--indigo-500); background: var(--indigo-50);
     color: var(--indigo-600); font-weight: 600;
   }
-
-  /* ===== COLD READING BANNER (slim — keep Listen/Read in viewport) ===== */
-  #screenReading .banner { padding: 12px 20px 14px; }
-  #screenReading .banner-with-brighty h2 { font-size: 16px; line-height: 1.3; font-weight: 600; }
-  #screenReading .banner-with-brighty .brighty--md { width: 36px; height: 36px; font-size: 20px; }
 
   /* ===== STORY IMAGE ===== */
   .story-image {
@@ -894,15 +891,14 @@
 
     /* Tighter desktop padding so the action buttons stay close to content */
     .screen-content { padding: 20px 56px; }
-    .banner { padding: 16px 56px 20px; }
+    .banner { padding: 12px 56px 14px; }
     .screen-bottom { padding: 12px 56px 24px; }
-    .banner h2 { font-size: 20px; }
-    .banner p { font-size: 14px; }
+    .banner h2 { font-size: 18px; }
+    .banner p { font-size: 13px; }
+    .banner-with-brighty .brighty--md { width: 40px; height: 40px; font-size: 22px; }
 
-    /* Compact Cold Reading banner — keep Listen + Read in the viewport. */
-    #screenReading .banner { padding: 10px 56px 12px; }
-    #screenReading .banner-with-brighty h2 { font-size: 15px; font-weight: 600; }
-    #screenReading .banner-with-brighty .brighty--md { width: 36px; height: 36px; font-size: 20px; }
+    /* Cold Reading content padding even tighter (no separate banner override —
+       the global slim banner already applies here). */
     #screenReading .screen-content { padding: 16px 56px; }
 
     /* Cold Reading: image left, passage + controls right.
@@ -935,8 +931,6 @@
     .grade-grid { max-width: 600px; }
     .setting-sub, .settings-section .speed-row { max-width: 720px; margin-left: auto; margin-right: auto; }
 
-    /* Bigger Brighty in the banner when there's room */
-    .banner-with-brighty .brighty--md { width: 56px; height: 56px; font-size: 32px; }
 
     /* Results passage + scores side by side */
     #screenResults .screen-content {
