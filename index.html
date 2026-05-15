@@ -354,6 +354,65 @@
     outline-offset: 2px;
   }
 
+  /* ===== HOME / DASHBOARD ===== */
+  .home-stats {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    margin-bottom: 22px;
+  }
+  .home-stat-card {
+    background: var(--white); border-radius: 14px; padding: 14px 10px;
+    border: 1px solid var(--slate-200); text-align: center;
+    box-shadow: var(--shadow-card);
+  }
+  .home-stat-icon { font-size: 22px; line-height: 1; }
+  .home-stat-value { font-size: 22px; font-weight: 700; color: var(--indigo-700); margin-top: 4px; }
+  .home-stat-label { font-size: 11px; color: var(--slate-500); margin-top: 2px; line-height: 1.2; }
+  .home-section-title {
+    font-size: 13px; font-weight: 700; color: var(--slate-700);
+    text-transform: uppercase; letter-spacing: 0.6px;
+    margin-bottom: 12px;
+  }
+  .home-entry {
+    background: var(--white); border: 1.5px dashed var(--slate-200);
+    border-radius: 16px; padding: 14px 16px; margin-bottom: 12px;
+    box-shadow: var(--shadow-card);
+  }
+  .home-entry-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; color: var(--slate-500); margin-bottom: 10px;
+  }
+  .home-entry-tag {
+    background: var(--indigo-50); color: var(--indigo-700);
+    padding: 2px 8px; border-radius: 999px; font-weight: 600;
+  }
+  .home-entry-passage {
+    font-size: 14px; line-height: 1.6; color: var(--slate-700);
+  }
+  .home-highlight {
+    background: var(--brighty-yellow-soft); color: var(--amber-500);
+    font-weight: 700; padding: 1px 4px; border-radius: 4px;
+  }
+  .home-entry-stats {
+    display: flex; gap: 14px; margin-top: 10px; flex-wrap: wrap;
+    font-size: 13px; color: var(--slate-600);
+  }
+  .home-empty {
+    text-align: center; padding: 32px 20px;
+    color: var(--slate-500); font-size: 15px;
+    background: var(--white); border: 1.5px dashed var(--slate-200);
+    border-radius: 16px;
+  }
+  .home-empty-emoji { font-size: 40px; margin-bottom: 12px; }
+
+  @media (min-width: 768px) {
+    .home-stats { grid-template-columns: repeat(3, 1fr); max-width: 700px; margin-left: auto; margin-right: auto; }
+  }
+  @media (min-width: 1024px) {
+    .home-stats { grid-template-columns: repeat(6, 1fr); max-width: none; }
+    .home-entry { max-width: 880px; margin-left: auto; margin-right: auto; }
+    .home-section-title { max-width: 880px; margin-left: auto; margin-right: auto; }
+  }
+
   /* ===== SETTINGS SCREEN (Grade + Role + Voice + Speed combined) ===== */
   .settings-section { margin-bottom: 24px; }
   .settings-section:last-child { margin-bottom: 0; }
@@ -966,7 +1025,7 @@
   <div class="header">
     <button class="header-btn header-btn-back" id="btnBack" onclick="goBack()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
-      <span class="header-btn-label">Settings</span>
+      <span class="header-btn-label">Home</span>
     </button>
     <div class="header-brand">
       <div class="header-logo">&#128048;</div>
@@ -998,7 +1057,28 @@
     </div>
   </div>
 
-  <!-- ===== SCREEN 1: Grade Selection ===== -->
+  <!-- ===== SCREEN: Home / Reading Journal Dashboard ===== -->
+  <div class="screen" id="screenHome">
+    <div class="banner banner-indigo">
+      <div class="banner-with-brighty">
+        <div class="brighty brighty--md">&#128048;</div>
+        <div>
+          <h2 id="homeGreeting">Welcome back!</h2>
+          <p>Here's your reading journey so far.</p>
+        </div>
+      </div>
+    </div>
+    <div class="screen-content">
+      <div class="home-stats" id="homeStats"></div>
+      <div class="home-section-title" id="homeSectionTitle">Recent stories</div>
+      <div id="homeEntries"></div>
+    </div>
+    <div class="screen-bottom">
+      <button class="btn btn-primary" onclick="goToSettings()">Make a new story &#128640;</button>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: Settings ===== -->
   <div class="screen" id="screenSettings">
     <div class="banner banner-indigo">
       <div class="banner-with-brighty">
@@ -1362,6 +1442,149 @@ let selectedSentenceIdx = null;
 // Tracks the most recent read so the results screen can show WPM + words.
 let lastRead = null;
 
+// ===== HOME / READING JOURNAL =====
+const HISTORY_KEY = 'readerly_history';
+const ONBOARDED_KEY = 'readerly_onboarded';
+const ROLE_SHORT = {
+  'Narrate an audiobook': 'Audiobook',
+  'Host a podcast': 'Podcast',
+  'Give a talk': 'Talk',
+  'Teach a lesson': 'Lesson',
+  'Perform a scene': 'Scene'
+};
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+  catch (e) { return []; }
+}
+
+function saveReadToHistory(entry) {
+  const history = loadHistory();
+  history.push(entry);
+  if (history.length > 30) history.splice(0, history.length - 30);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+function computeStreak(history) {
+  if (!history.length) return 0;
+  const dayKey = ts => new Date(ts).toDateString();
+  const days = new Set(history.map(e => dayKey(e.ts)));
+  // Start from today; if no read today, start from yesterday.
+  const now = new Date();
+  let cursor = new Date(now);
+  if (!days.has(dayKey(cursor.getTime()))) {
+    cursor = new Date(now.getTime() - 86400000);
+  }
+  let streak = 0;
+  while (days.has(dayKey(cursor.getTime()))) {
+    streak++;
+    cursor = new Date(cursor.getTime() - 86400000);
+  }
+  return streak;
+}
+
+function computeHomeStats(history) {
+  const now = Date.now();
+  const weekAgo = now - 7 * 86400000;
+  const thisWeek = history.filter(e => e.ts >= weekAgo);
+  const stars = history.reduce((s, e) => s + (e.stars || 0), 0);
+  const avgWpm = history.length
+    ? Math.round(history.reduce((s, e) => s + (e.wpm || 0), 0) / history.length)
+    : 0;
+  const wordsThisWeek = thisWeek.reduce((s, e) => s + (e.wordsRead || 0), 0);
+  const practiceSet = new Set();
+  history.forEach(e => (e.practiceWords || []).forEach(w => practiceSet.add(String(w).toLowerCase())));
+  return {
+    streak: computeStreak(history),
+    stars,
+    passagesThisWeek: thisWeek.length,
+    avgWpm,
+    wordsThisWeek,
+    practiceWordsCount: practiceSet.size
+  };
+}
+
+function escapeHtmlSafe(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function highlightPracticeWords(passage, words) {
+  const escaped = escapeHtmlSafe(passage);
+  if (!words || !words.length) return escaped;
+  const lower = new Set(words.map(w => String(w).toLowerCase()));
+  return escaped.replace(/\b([A-Za-z][A-Za-z'\-]*)\b/g, (m, w) =>
+    lower.has(w.toLowerCase()) ? '<span class="home-highlight">' + w + '</span>' : m
+  );
+}
+
+function formatEntryDate(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 86400000);
+  const dDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (dDay.getTime() === today.getTime()) return 'Today, ' + time;
+  if (dDay.getTime() === yesterday.getTime()) return 'Yesterday, ' + time;
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + time;
+}
+
+function renderHome() {
+  const history = loadHistory();
+  const stats = computeHomeStats(history);
+  const cards = [
+    { icon: '🔥', value: stats.streak,             label: stats.streak === 1 ? 'day streak' : 'days streak' },
+    { icon: '⭐', value: stats.stars,              label: 'stars earned' },
+    { icon: '📖', value: stats.passagesThisWeek,   label: 'this week' },
+    { icon: '⚡', value: stats.avgWpm,             label: 'avg WPM' },
+    { icon: '📝', value: stats.wordsThisWeek,      label: 'words this week' },
+    { icon: '📚', value: stats.practiceWordsCount, label: 'to practice' }
+  ];
+  document.getElementById('homeStats').innerHTML = cards.map(c =>
+    '<div class="home-stat-card">' +
+      '<div class="home-stat-icon">' + c.icon + '</div>' +
+      '<div class="home-stat-value">' + c.value + '</div>' +
+      '<div class="home-stat-label">' + c.label + '</div>' +
+    '</div>'
+  ).join('');
+
+  const entriesEl = document.getElementById('homeEntries');
+  const sectionTitle = document.getElementById('homeSectionTitle');
+  if (!history.length) {
+    sectionTitle.style.display = 'none';
+    entriesEl.innerHTML =
+      '<div class="home-empty">' +
+        '<div class="home-empty-emoji">📖</div>' +
+        "Your journal is empty. Make your first story to start filling it up!" +
+      '</div>';
+    return;
+  }
+  sectionTitle.style.display = '';
+  // Newest first; cap to last 10 displayed.
+  const recent = history.slice().reverse().slice(0, 10);
+  entriesEl.innerHTML = recent.map(e => {
+    const tag = ROLE_SHORT[e.role] || e.role || '';
+    const passageHtml = highlightPracticeWords(e.passage || '', e.practiceWords || []);
+    return '<div class="home-entry">' +
+      '<div class="home-entry-meta">' +
+        '<span>' + formatEntryDate(e.ts) + '</span>' +
+        '<span class="home-entry-tag">' + escapeHtmlSafe(e.grade || '') + ' · ' + escapeHtmlSafe(tag) + '</span>' +
+      '</div>' +
+      '<div class="home-entry-passage">' + passageHtml + '</div>' +
+      '<div class="home-entry-stats">' +
+        '<span>⚡ ' + (e.wpm || 0) + ' WPM</span>' +
+        '<span>📖 ' + (e.wordsRead || 0) + ' / ' + (e.totalWords || 0) + ' words</span>' +
+        (e.stars ? '<span>⭐ ' + e.stars + '</span>' : '') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function goToHome() {
+  renderHome();
+  showScreen('screenHome');
+}
+
 function showActionsState(state) {
   ['actionsIdle', 'actionsReading', 'actionsPaused'].forEach(id => {
     const el = document.getElementById(id);
@@ -1394,7 +1617,7 @@ let sessionWordsWithErrors = [];
 // Screens where "Settings" doesn't make sense as a back destination — either
 // you're already on Settings or you haven't picked anything yet. Hide the
 // back button on those; show "← Settings" on every other screen.
-const SCREENS_WITHOUT_BACK = new Set(['screenOnboard', 'screenSettings']);
+const SCREENS_WITHOUT_BACK = new Set(['screenOnboard', 'screenHome']);
 
 function showScreen(id) {
   const current = document.querySelector('.screen.active');
@@ -1415,7 +1638,7 @@ function goBack() {
   if (typeof stopNarration === 'function') stopNarration();
   if (typeof stopPreview === 'function') stopPreview();
   screenHistory = [];
-  goToSettings();
+  goToHome();
 }
 
 function closeApp() {
@@ -1423,6 +1646,8 @@ function closeApp() {
   if (typeof stopNarration === 'function') stopNarration();
   if (typeof stopPreview === 'function') stopPreview();
   screenHistory = [];
+  // Returning users go to Home; first-timers see onboarding.
+  if (localStorage.getItem(ONBOARDED_KEY)) { goToHome(); return; }
   onboardStep = 0;
   updateOnboardSlide();
   showScreen('screenOnboard');
@@ -1457,7 +1682,20 @@ function skipOnboarding() {
   sessionTexts = [];
   sessionWordsPracticed = [];
   sessionWordsWithErrors = [];
-  goToSettings();
+  localStorage.setItem(ONBOARDED_KEY, '1');
+  goToHome();
+}
+
+// On app load, returning users skip onboarding and land on Home directly.
+function initApp() {
+  if (localStorage.getItem(ONBOARDED_KEY)) {
+    goToHome();
+  }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
 }
 
 // ===== SETTINGS (Grade + Role + Voice + Speed merged) =====
@@ -2479,6 +2717,23 @@ function showResults() {
   btnNewText.classList.remove('hidden');
 
   previousScores = { ...scores };
+
+  // Persist this read to the Home journal — used for streak, stats, recent
+  // passages with practice-word highlights.
+  saveReadToHistory({
+    ts: Date.now(),
+    grade: currentLevel,
+    role: currentRole,
+    situation: currentSituation,
+    passage: currentText,
+    wpm,
+    wordsRead: wordsHeard,
+    totalWords,
+    scores: { overall: scores.overall, accuracy: scores.accuracy },
+    practiceWords: practiceWords.slice(0, 12),
+    stars: starCount
+  });
+
   showScreen('screenResults');
   // Celebrate a strong result (and any improvement on re-reads).
   if (scores.overall >= 70 || (previousWpm != null && wpm > previousWpm)) {
@@ -2751,13 +3006,13 @@ function goBackToResults() {
 
 // ===== RE-READ & NEW TEXT =====
 function readSameText() {
-  screenHistory = ['screenSettings'];
+  screenHistory = ['screenHome'];
   showScreen('screenReading');
   resetReadingUI();
 }
 
 function tryNewText() {
-  screenHistory = ['screenSettings'];
+  screenHistory = ['screenHome'];
   pickRandomAndGenerate();
 }
 
