@@ -328,7 +328,13 @@
     0% { background-position: 100% 0; }
     100% { background-position: -100% 0; }
   }
-  .story-image.is-error { display: none; }
+  .story-image.is-error::after {
+    content: '🖼️'; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px; opacity: 0.45;
+  }
+  .story-image.is-error { background: var(--slate-100); }
+  .story-image.is-idle { display: none; }
   .story-image img {
     width: 100%; height: 100%; object-fit: cover; display: block;
   }
@@ -1811,16 +1817,27 @@ async function generateStoryImage(situation, grade) {
     'No text, letters, words, or captions anywhere in the image.'
   ].join(' ');
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`;
+  console.log('[storyImage] requesting:', { situation, grade });
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
   });
-  if (!res.ok) throw new Error(`Image API ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text();
+    console.error('[storyImage] HTTP error', res.status, text.slice(0, 500));
+    throw new Error(`Image API ${res.status}`);
+  }
   const data = await res.json();
-  const parts = data?.candidates?.[0]?.content?.parts || [];
+  const candidate = data?.candidates?.[0];
+  const parts = candidate?.content?.parts || [];
   const imagePart = parts.find(p => p.inlineData?.mimeType?.startsWith('image/'));
-  if (!imagePart) throw new Error('No image in response');
+  if (!imagePart) {
+    console.error('[storyImage] No image in response. finishReason:', candidate?.finishReason,
+      'safetyRatings:', candidate?.safetyRatings, 'parts:', parts.map(p => Object.keys(p)));
+    throw new Error('No image in response');
+  }
+  console.log('[storyImage] received', imagePart.inlineData.mimeType, 'size:', imagePart.inlineData.data.length);
   return `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
 }
 
