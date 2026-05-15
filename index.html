@@ -1545,6 +1545,65 @@ function buildContextSnippet(refWords, idx) {
   };
 }
 
+// Translate a recognized word's Azure offsets into absolute positions in our
+// MediaRecorder blob: sessionAnchorMs (when this Azure session started) plus
+// the word's offset (ticks → ms). Returns null if we don't have a recording.
+function deriveYouAudio(wordData) {
+  if (!recordedAudioState.blobUrl) return null;
+  if (typeof wordData?.Offset !== 'number' || typeof wordData?.Duration !== 'number') return null;
+  const anchor = wordData._sessionAnchorMs || 0;
+  return {
+    startMs: anchor + Math.round(wordData.Offset / 10000),
+    durationMs: Math.round(wordData.Duration / 10000)
+  };
+}
+
+// Play a single word's slice of the recorded mic blob. Adds a tiny pad before
+// and after so words don't feel clipped; uses an <audio> element seeked to
+// startMs/1000 and watched for stop time.
+let youPlayState = { runId: 0, audio: null, btn: null };
+function stopYouPlay() {
+  youPlayState.runId++;
+  if (youPlayState.audio) {
+    try { youPlayState.audio.pause(); } catch (_) {}
+    youPlayState.audio = null;
+  }
+  if (youPlayState.btn) {
+    youPlayState.btn.classList.remove('is-playing');
+    youPlayState.btn = null;
+  }
+}
+function playYourRecording(startMs, durationMs, btn) {
+  if (!recordedAudioState.blobUrl) return;
+  stopYouPlay();
+  stopFeedbackPlay();
+
+  youPlayState.btn = btn;
+  if (btn) btn.classList.add('is-playing');
+  youPlayState.runId++;
+  const myRun = youPlayState.runId;
+
+  const padBefore = 60;
+  const padAfter = 120;
+  const audio = new Audio(recordedAudioState.blobUrl);
+  youPlayState.audio = audio;
+  const startSec = Math.max(0, (startMs - padBefore) / 1000);
+  const stopSec = (startMs + durationMs + padAfter) / 1000;
+
+  const onCanPlay = () => {
+    audio.removeEventListener('canplay', onCanPlay);
+    try { audio.currentTime = startSec; } catch (_) {}
+    audio.play().catch(() => stopYouPlay());
+  };
+  audio.addEventListener('canplay', onCanPlay);
+  audio.ontimeupdate = () => {
+    if (myRun !== youPlayState.runId) return;
+    if (audio.currentTime >= stopSec) stopYouPlay();
+  };
+  audio.onended = () => { if (myRun === youPlayState.runId) stopYouPlay(); };
+  audio.onerror = () => { if (myRun === youPlayState.runId) stopYouPlay(); };
+}
+
 // Pick the 1-3 worst phonemes from Azure's per-word breakdown.
 function extractWeakPhonemes(wordData) {
   const phs = wordData?.Phonemes;
@@ -1670,6 +1729,11 @@ function renderFeedbackCards(isReAttempt) {
         '</div>'
       : '';
     const escapedWord = escapeHtmlSafe(item.word).replace(/'/g, '&#39;');
+    const youBtn = item.youAudio
+      ? '<button class="feedback-btn" onclick="playYourRecording(' + item.youAudio.startMs + ',' + item.youAudio.durationMs + ', this)">' +
+          '<span class="feedback-btn-icon">🔊</span> You' +
+        '</button>'
+      : '';
     return '<div class="feedback-card">' +
       '<div class="feedback-card-head">' +
         '<span class="feedback-card-label">Practice pronunciation</span>' +
@@ -1678,6 +1742,7 @@ function renderFeedbackCards(isReAttempt) {
       '<div class="feedback-card-context">' + ctxHtml + '</div>' +
       phonHtml +
       '<div class="feedback-card-actions">' +
+        youBtn +
         '<button class="feedback-btn" onclick="playWordExample(\'' + escapedWord + '\', this)">' +
           '<span class="feedback-btn-icon">🔊</span> Example' +
         '</button>' +
@@ -1850,8 +1915,90 @@ let finalPronScores = { accuracy: 0, fluency: 0, completeness: 0, prosody: 0, ov
 let pronScoreWeights = 0;
 let practiceWords = [];
 // Rich per-word feedback for the Results screen cards.
-// {word, score, errorType, contextSnippet, weakPhonemes:[{name,score}]}.
+// {word, score, errorType, contextSnippet, weakPhonemes:[{name,score}],
+//  youAudio:{startMs, durationMs} | null}.
 let practiceFeedback = [];
+
+// Independent MediaRecorder pipeline that captures the kid's own voice so we
+// can replay individual mispronounced words on the Feedback cards. Lives on
+// its own mic stream so Azure can pause/resume freely without affecting it.
+let recordedAudioState = {
+  stream: null,           // dedicated mic stream for MediaRecorder
+  mediaRecorder: null,
+  chunks: [],             // Blob fragments from ondataavailable
+  blobUrl: null,          // URL.createObjectURL of the final combined blob
+  startedAtMs: null,      // wall-clock time MediaRecorder started
+  sessionAnchorMs: 0,     // wall-time offset into recording when current Azure session started
+  active: false
+};
+
+function recorderElapsedMs() {
+  if (!recordedAudioState.startedAtMs) return 0;
+  return Date.now() - recordedAudioState.startedAtMs;
+}
+
+async function startRecorder() {
+  // Free any prior recording before starting fresh.
+  if (recordedAudioState.blobUrl) {
+    try { URL.revokeObjectURL(recordedAudioState.blobUrl); } catch (_) {}
+    recordedAudioState.blobUrl = null;
+  }
+  recordedAudioState.chunks = [];
+  recordedAudioState.sessionAnchorMs = 0;
+  recordedAudioState.active = false;
+  recordedAudioState.startedAtMs = null;
+
+  if (!window.MediaRecorder || !navigator.mediaDevices?.getUserMedia) return;
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
+    });
+    recordedAudioState.stream = stream;
+    // Browsers don't all support the same containers; let it pick a default.
+    const mr = new MediaRecorder(stream);
+    recordedAudioState.mediaRecorder = mr;
+    mr.ondataavailable = (e) => {
+      if (e.data && e.data.size) recordedAudioState.chunks.push(e.data);
+    };
+    mr.start(500); // flush every 500ms so we don't lose data on abrupt stop
+    recordedAudioState.startedAtMs = Date.now();
+    recordedAudioState.active = true;
+  } catch (err) {
+    console.warn('[recorder] could not start:', err);
+    recordedAudioState.active = false;
+  }
+}
+
+// Stop MediaRecorder, combine chunks into a single Blob, store URL. Resolves
+// once the final dataavailable event has flushed.
+function stopRecorder() {
+  return new Promise((resolve) => {
+    const mr = recordedAudioState.mediaRecorder;
+    if (!mr || mr.state === 'inactive') {
+      finalizeRecorder();
+      resolve();
+      return;
+    }
+    mr.onstop = () => { finalizeRecorder(); resolve(); };
+    try { mr.stop(); } catch (_) { finalizeRecorder(); resolve(); }
+  });
+}
+
+function finalizeRecorder() {
+  const chunks = recordedAudioState.chunks;
+  if (chunks.length) {
+    const type = chunks[0].type || 'audio/webm';
+    const blob = new Blob(chunks, { type });
+    recordedAudioState.blobUrl = URL.createObjectURL(blob);
+  }
+  if (recordedAudioState.stream) {
+    try { recordedAudioState.stream.getTracks().forEach(t => t.stop()); } catch (_) {}
+    recordedAudioState.stream = null;
+  }
+  recordedAudioState.mediaRecorder = null;
+  recordedAudioState.active = false;
+}
 let currentPracticeIdx = 0;
 let previousScores = null;
 let attemptCount = 0;
@@ -1889,6 +2036,7 @@ function goBack() {
   if (typeof stopNarration === 'function') stopNarration();
   if (typeof stopPreview === 'function') stopPreview();
   if (typeof stopFeedbackPlay === 'function') stopFeedbackPlay();
+  if (typeof stopYouPlay === 'function') stopYouPlay();
   screenHistory = [];
   goToHome();
 }
@@ -2596,6 +2744,8 @@ async function startReading() {
   document.getElementById('wordCounter').textContent = '0 / ' + currentText.split(/\s+/).length + ' words';
   renderPassageHighlight(0);
   showActionsState('Reading');
+  await startRecorder();
+  recordedAudioState.sessionAnchorMs = recorderElapsedMs();
   await _initRecognizer();
 }
 
@@ -2608,6 +2758,8 @@ async function resumeReading() {
   renderPassageHighlight(currentSentenceIdx());
   showActionsState('Reading');
   // Don't reset accumulators — Azure picks up from where the kid is.
+  // Mark this Azure session's start on the recorder timeline.
+  recordedAudioState.sessionAnchorMs = recorderElapsedMs();
   await _initRecognizer();
 }
 
@@ -2639,16 +2791,21 @@ function endReading() {
   // Wrap up the whole session and go to results.
   readingPhase = 'idle';
   isReading = false;
+  // Stop the MediaRecorder so its final blob is sealed; showResults waits for
+  // it via a small promise so the Feedback cards can immediately reference
+  // recordedAudioState.blobUrl.
+  const recorderDone = stopRecorder();
+  const finish = () => recorderDone.then(showResults).catch(showResults);
   if (recognizer) {
     const r = recognizer;
     recognizer = null;
     r.stopContinuousRecognitionAsync(
-      () => { try { r.close(); } catch (e) {} releaseStream(); showResults(); },
-      () => { try { r.close(); } catch (e) {} releaseStream(); showResults(); }
+      () => { try { r.close(); } catch (e) {} releaseStream(); finish(); },
+      () => { try { r.close(); } catch (e) {} releaseStream(); finish(); }
     );
   } else {
     releaseStream();
-    showResults();
+    finish();
   }
 }
 
@@ -2708,7 +2865,13 @@ async function _initRecognizer() {
           SpeechSDK.PropertyId.SpeechServiceResponse_JsonResult
         ));
         const nBest = json.NBest && json.NBest[0];
-        if (nBest && nBest.Words) allRecognizedWords = allRecognizedWords.concat(nBest.Words);
+        if (nBest && nBest.Words) {
+          // Tag each word with the recorder-time anchor of the current Azure
+          // session, so later we can compute absoluteAudioMs for the You button.
+          const anchor = recordedAudioState.sessionAnchorMs;
+          const tagged = nBest.Words.map(w => Object.assign({}, w, { _sessionAnchorMs: anchor }));
+          allRecognizedWords = allRecognizedWords.concat(tagged);
+        }
         if (nBest && nBest.PronunciationAssessment) {
           const pa = nBest.PronunciationAssessment;
           const w = nBest.Words ? nBest.Words.length : 1;
@@ -2918,7 +3081,8 @@ function showResults() {
           score,
           errorType,
           contextSnippet: buildContextSnippet(refWords, idx),
-          weakPhonemes: extractWeakPhonemes(wordData)
+          weakPhonemes: extractWeakPhonemes(wordData),
+          youAudio: deriveYouAudio(wordData)
         });
       }
     } else {
@@ -2931,7 +3095,8 @@ function showResults() {
         score: 0,
         errorType: 'Omission',
         contextSnippet: buildContextSnippet(refWords, idx),
-        weakPhonemes: []
+        weakPhonemes: [],
+        youAudio: null
       });
     }
   });
